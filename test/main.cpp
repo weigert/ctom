@@ -35,13 +35,13 @@ int main( int argc, char* args[] ) {
 
 	struct B: B_model {
 		A a = B::obj<"sub-obj">(A{});
-		char c = B::val<"sub-char">('y');
+		char c = B::val<"sub-char">('z');
 	};
 
 	struct T: T_model {
 		int t = T::val<"valA">(10);
 //		int a = T::val<"valA">(5);
-		B_model b = T::obj<"object">(B_model{});
+		B b = T::obj<"object">(B{});
 	} Tval;
 
 	std::cout<<std::endl<<"(instance)"<<std::endl;

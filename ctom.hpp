@@ -145,21 +145,31 @@ template <
     || is_derived_ref_contained<refA<keyA, A>, Tail...>::value;
 };
 
-// Tuple Indexer
+// Tuple-of-Ref Indexer, which will index based on derived type
 
-template <class T, size_t N, class... Args>
-struct tuple_index {
+template <ref_type T, size_t N, ref_type... Args>
+struct ref_index;
+
+template <ref_type T, size_t N, ref_type... Args>
+struct ref_index {
     static constexpr size_t value = N;
 };
 
-template <class T, size_t N, class... Args>
-struct tuple_index<T, N, T, Args...> {
+template <ref_type T, size_t N>
+struct ref_index<T, N>{
     static constexpr size_t value = N;
 };
 
-template <class T, size_t N, class U, class... Args>
-struct tuple_index<T, N, U, Args...> {
-    static constexpr size_t value = tuple_index<T, N + 1, Args...>::value;
+template <ref_type T, size_t N, ref_type U, ref_type... Args>
+requires(!is_derived_ref<T, U>::value)
+struct ref_index<T, N, U, Args...> {
+    static constexpr size_t value = ref_index<T, N + 1, Args...>::value;
+};
+
+template <ref_type T, size_t N, ref_type U, ref_type... Args>
+requires(is_derived_ref<T, U>::value)
+struct ref_index<T, N, U, Args...> {
+    static constexpr size_t value = N;
 };
 
 // Type-List Iterator
@@ -193,15 +203,6 @@ struct is_unique<Head, Tail...>{
                         Template Meta Object Model
 ================================================================================
 */
-
-
-
-
-
-
-
-
-
 
 // Node-Type Declarations
 //  Structs which are templated by a specific ref type
@@ -296,11 +297,11 @@ struct obj_impl: obj_base {
   static constexpr size_t size = std::tuple_size<std::tuple<node<refs>...>>::value;
 
   template<ref_type ref> struct index {
-    static constexpr size_t value = tuple_index<ref, 0, refs...>::value;
+    static constexpr size_t value = ref_index<ref, 0, refs...>::value;
   };
 
   template<ref_type ref>
-  node<ref>& get() {
+  auto& get() {
     static_assert(index<ref>::value < size, "index is out of bounds");
     return std::get<index<ref>::value>(nodes);
   }
@@ -318,7 +319,7 @@ struct obj_impl: obj_base {
   V val(const V& v){
     static_assert(is_value<V>, "type is not a value type");
     static_assert(is_contained<ref_val<ref, V>, refs...>::value, "key for yaml::val does not exist in yaml::obj");
-    node_val<ref, val_impl<V>>& node = get<ref_val<ref, V>>();
+    auto& node = get<ref_val<ref, V>>();
     node.val.value = v;
     return std::move(v);
   }
@@ -327,9 +328,8 @@ struct obj_impl: obj_base {
   T obj(const T& v){
     static_assert(obj_type<T>, "type is not a derived type of yaml::obj");
     static_assert(is_derived_ref_contained<ref_obj<ref, T>, refs...>::value, "key for yaml::obj does not exist in yaml::obj");
-
-  //  node<ref_obj<ref, T>>& node = get<ref_obj<ref, T>>();
-  //  node.obj = v;
+    auto& node = get<ref_obj<ref, T>>();
+    node.obj = v;
     return std::move(v);
   }
 };
