@@ -205,11 +205,13 @@ concept is_value =
 
 template<is_value V>
 struct val_impl: val_base {
-  V value = 5;
+  V value;
 };
 
 template<constexpr_string ref, is_value V>
 using ref_val = ref_val_impl<ref, val_impl<V>>;
+template<constexpr_string ref, is_value V>
+using val = ref_val<ref, V>;
 
 // Array
 
@@ -220,11 +222,15 @@ struct arr_impl: arr_base {
 
 template<constexpr_string ref, typename T>
 using ref_arr = ref_arr_impl<ref, arr_impl<T>>;
+template<constexpr_string ref, typename T>
+using arr = ref_arr<ref, arr_impl<T>>;
 
 // Object
 
 template<constexpr_string Key, obj_type T>
 using ref_obj = ref_obj_impl<Key, T>;
+template<constexpr_string Key, obj_type T>
+using obj = ref_obj<Key, T>;
 
 template<ref_type... refs>
 struct obj_impl: obj_base {
@@ -334,26 +340,25 @@ void print(){
   printer<T>::print();
 }
 
-/*
-
 // Instance-Based Marshalling
 
 template<constexpr_string ref, val_type T>
-void print(node<ref_val_impl<ref, T>>& node, size_t shift){
+void print(node_val<ref, T>& node, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<val_base::type<<": ";
-  std::cout<<ref<<"\n";
+  std::cout<<ref<<" = ";
+  std::cout<<node.val.value<<"\n";
 }
 
 template<constexpr_string ref, arr_type T>
-void print(node<ref_arr_impl<ref, T>>& node, size_t shift){
+void print(node_arr<ref, T>& node, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<arr_base::type<<": ";
   std::cout<<ref<<"\n";
 }
 
 template<constexpr_string ref, obj_type T>
-void print(node<ref_obj_impl<ref, T>>& node, size_t shift){
+void print(node_obj<ref, T>& node, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<obj_base::type<<": ";
   std::cout<<ref<<"\n";
@@ -366,10 +371,8 @@ void print(node<ref_obj_impl<ref, T>>& node, size_t shift){
 template<obj_type T>
 void print(T& obj){
   std::apply([](auto&&... args){
-    (ctom::print(args, 0), ...);
+    (ctom::print(args), ...);
   }, obj.nodes);
 }
-
-*/
 
 }
