@@ -17,11 +17,33 @@ meta-programming techniques. The object-model allows for fast (un)marshalling
 of various data formats, and is similar to semantic tags in golang.
 
 the original intent was a type-safe compile-time yaml parser.
-
-================================================================================
-                        Implementation Details
-================================================================================
 */
+
+// Basic Ref-Types
+
+struct ref_base{};
+struct val_base{
+  static constexpr const char * type = "val";
+};
+struct arr_base{
+  static constexpr const char * type = "arr";
+};
+struct obj_base{
+  static constexpr const char * type = "obj";
+};
+
+// Base-Type Concepts
+//  Lets us defined templated derived types
+//  and still easily restrict parameters
+
+template<typename T>
+concept ref_type = std::derived_from<T, ref_base>;
+template<typename T>
+concept val_type = std::derived_from<T, val_base>;
+template<typename T>
+concept arr_type = std::derived_from<T, arr_base>;
+template<typename T>
+concept obj_type = std::derived_from<T, obj_base>;
 
 // Constant Expression String
 //  Lets us use a string-literal as a template parameter
@@ -51,7 +73,44 @@ template<size_t N> struct constexpr_string {
 };
 template<unsigned N> constexpr_string(char const (&)[N]) ->constexpr_string<N-1>;
 
-// Object in Set
+template<constexpr_string S>
+struct constexpr_key{};
+
+// References to Base-Type Implementations
+//  Acts as an identifier for a ref to
+//  specific type implementations
+
+template<constexpr_string ref, val_type V>
+struct ref_val_impl: ref_base {};
+
+template<constexpr_string Key, arr_type T>
+struct ref_arr_impl: ref_base {};
+
+template<constexpr_string Key, obj_type T>
+struct ref_obj_impl: ref_base {};
+
+// Is Derived Ref
+//  Checks if two reference-types have the same key and point to
+//  a derived type A and a base type B
+
+template<typename A, typename B>
+struct is_derived {
+  static constexpr const bool value = std::is_base_of<B, A>::value;
+};
+
+template<ref_type A, ref_type B>
+struct is_derived_ref;
+
+template<
+  template<constexpr_string, typename> typename refA, constexpr_string keyA, typename A,
+  template<constexpr_string, typename> typename refB, constexpr_string keyB, typename B
+>
+struct is_derived_ref<refA<keyA, A>, refB<keyB, B>> {
+  static constexpr const bool value = is_derived<A, B>::value
+    && std::is_same<constexpr_key<keyA>, constexpr_key<keyB>>::value;
+};
+
+// Ref in Argument Set
 
 template <typename T, typename... List>
 struct is_contained;
@@ -64,22 +123,26 @@ struct is_contained<T> {
 template <typename T, typename Head, typename... Tail>
 struct is_contained<T, Head, Tail...>{
   static constexpr bool value =
-    std::is_same<T, Head>::value || is_contained<T, Tail...>::value;
+  std::is_same<T, Head>::value || std::is_base_of<Head, T>::value || is_contained<T, Tail...>::value;
 };
 
-// Unique Key in Key-Set
+// Is Derived Ref Contained
 
-template <typename... List>
-struct is_unique;
+template <ref_type T, ref_type... List>
+struct is_derived_ref_contained;
 
-template <>
-struct is_unique<> {
-    static constexpr bool value = true;
+template <ref_type T>
+struct is_derived_ref_contained<T> {
+  static constexpr bool value = false;
 };
 
-template <typename Head, typename... Tail>
-struct is_unique<Head, Tail...>{
-  static constexpr bool value = !is_contained<Head, Tail...>::value && is_unique<Tail...>::value;
+template <
+  template<constexpr_string, typename> typename refA, constexpr_string keyA, typename A,
+  template<constexpr_string, typename> typename refB, constexpr_string keyB, typename B,
+  ref_type... Tail
+> struct is_derived_ref_contained<refA<keyA, A>, refB<keyB, B>, Tail...>{
+  static constexpr bool value = is_derived_ref<refA<keyA, A>, refB<keyB, B>>::value
+    || is_derived_ref_contained<refA<keyA, A>, Tail...>::value;
 };
 
 // Tuple Indexer
@@ -99,10 +162,31 @@ struct tuple_index<T, N, U, Args...> {
     static constexpr size_t value = tuple_index<T, N + 1, Args...>::value;
 };
 
+// Type-List Iterator
+
 template <typename... Ts, typename F>
 constexpr void for_types(F&& f){
     (f.template operator()<Ts>(), ...);
 }
+
+/*
+
+// Unique Key in Key-Set
+
+template <typename... List>
+struct is_unique;
+
+template <>
+struct is_unique<> {
+    static constexpr bool value = true;
+};
+
+template <typename Head, typename... Tail>
+struct is_unique<Head, Tail...>{
+  static constexpr bool value = !is_contained<Head, Tail...>::value && is_unique<Tail...>::value;
+};
+
+*/
 
 /*
 ================================================================================
@@ -110,44 +194,14 @@ constexpr void for_types(F&& f){
 ================================================================================
 */
 
-// Basic Ref-Types
 
-struct ref_base{};
-struct val_base{
-  static constexpr const char * type = "val";
-};
-struct arr_base{
-  static constexpr const char * type = "arr";
-};
-struct obj_base{
-  static constexpr const char * type = "obj";
-};
 
-// Base-Type Concepts
-//  Lets us defined templated derived types
-//  and still easily restrict parameters
 
-template<typename T>
-concept ref_type = std::derived_from<T, ref_base>;
-template<typename T>
-concept val_type = std::derived_from<T, val_base>;
-template<typename T>
-concept arr_type = std::derived_from<T, arr_base>;
-template<typename T>
-concept obj_type = std::derived_from<T, obj_base>;
 
-// References to Base-Type Implementations
-//  Acts as an identifier for a ref to
-//  specific type implementations
 
-template<constexpr_string ref, val_type V>
-struct ref_val_impl: ref_base {};
 
-template<constexpr_string Key, arr_type T>
-struct ref_arr_impl: ref_base {};
 
-template<constexpr_string Key, obj_type T>
-struct ref_obj_impl: ref_base {};
+
 
 // Node-Type Declarations
 //  Structs which are templated by a specific ref type
@@ -272,9 +326,10 @@ struct obj_impl: obj_base {
   template<constexpr_string ref, typename T>
   T obj(const T& v){
     static_assert(obj_type<T>, "type is not a derived type of yaml::obj");
-    static_assert(is_contained<ref_obj<ref, T>, refs...>::value, "key for yaml::obj does not exist in yaml::obj");
-    node<ref_obj<ref, T>>& node = get<ref_obj<ref, T>>();
-    node.obj = v;
+    static_assert(is_derived_ref_contained<ref_obj<ref, T>, refs...>::value, "key for yaml::obj does not exist in yaml::obj");
+
+  //  node<ref_obj<ref, T>>& node = get<ref_obj<ref, T>>();
+  //  node.obj = v;
     return std::move(v);
   }
 };
