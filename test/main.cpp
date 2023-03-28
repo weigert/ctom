@@ -10,8 +10,15 @@ int main( int argc, char* args[] ) {
 		ctom::val<"sub-sub-double", double>
 	>{};
 
+		// Abstract Model Extension
+
+	struct A_extended: A_model::ext<
+		ctom::val<"sub-sub-int-2", int>,
+		ctom::obj<"sub-sub-obj-ext", A_model>
+	>{};
+
 	struct B_model: ctom::obj_impl<
-		ctom::obj<"sub-obj", A_model>,
+		ctom::obj<"sub-obj", A_extended>,
 		ctom::val<"sub-char", char>
 	>{};
 
@@ -27,7 +34,7 @@ int main( int argc, char* args[] ) {
 
 	// Concrete Model Translation
 
-	struct A: A_model {
+	struct A: A_extended {
 		int a;
 		float b;
 		double c;
@@ -40,7 +47,7 @@ int main( int argc, char* args[] ) {
 
 	struct T: T_model {
 		int t = T::val<"valA">(10);
-//		int a = T::val<"valA">(5);
+		int a = T::val<"valA">(5);
 		B b = T::obj<"object">(B{});
 	} Tval;
 
