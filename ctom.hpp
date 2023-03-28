@@ -474,7 +474,13 @@ template<constexpr_string ref, arr_type T>
 void print(node_arr<ref, T>& node, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<arr_base::type<<": ";
-  std::cout<<ref<<"\n";
+  std::cout<<ref<<" = ["<<"\n";
+  for(size_t n = 0; n < node.arr.values.size(); n++){
+    for(size_t s = 0; s < shift; s++) std::cout<<"  ";
+    std::cout<<"  "<<node.arr.values[n]<<",\n";
+  }
+  for(size_t s = 0; s < shift; s++) std::cout<<"  ";
+  std::cout<<"]"<<std::endl;
 }
 
 template<constexpr_string ref, obj_type T>

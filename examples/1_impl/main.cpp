@@ -23,7 +23,7 @@ int main( int argc, char* args[] ) {
 		ctom::val<"int", int>,
 		ctom::val<"float", float>,
 		ctom::val<"double", double>,
-		ctom::arr<"foo", Foo>,
+	//	ctom::arr<"foo", Foo>,
 		ctom::obj<"bar", Bar>
 	>{};
 
@@ -33,8 +33,8 @@ int main( int argc, char* args[] ) {
 		int a 							= Foo::val<"foo-int">(10);
 		float b 						= Foo::val<"foo-float">(10.0f);
 		double c 						= Foo::val<"foo-double">(10.0);
-		std::vector<int> f 	= Foo::arr<"int-arr">({100});
-		std::set<float> s 	= Foo::arr<"float-arr">({100.0f});
+		std::vector<int> f 	= Foo::arr<"int-arr">({1, 2, 3});
+		std::set<float> s 	= Foo::arr<"float-arr">({0.1f, 0.2f, 0.3f});
 		int x, y;						// additional parameters don't matter
 	};
 
