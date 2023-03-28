@@ -150,6 +150,40 @@ template <
     || is_derived_ref_contained<refA<keyA, A>, Tail...>::value;
 };
 
+// Is Ref Key Contained
+
+template <ref_type T, ref_type... List>
+struct is_ref_key_contained;
+
+template <ref_type T>
+struct is_ref_key_contained<T> {
+  static constexpr bool value = false;
+};
+
+template <
+  template<constexpr_string, typename> typename refA, constexpr_string keyA, typename A,
+  template<constexpr_string, typename> typename refB, constexpr_string keyB, typename B,
+  ref_type... Tail
+> struct is_ref_key_contained<refA<keyA, A>, refB<keyB, B>, Tail...>{
+  static constexpr bool value = is_same_key<keyA, keyB>::value
+    || is_ref_key_contained<refA<keyA, A>, Tail...>::value;
+};
+
+// Is Key Unique
+
+template <ref_type... refs>
+struct is_ref_key_unique;
+
+template <>
+struct is_ref_key_unique<> {
+    static constexpr bool value = true;
+};
+
+template <typename ref, typename... refs>
+struct is_ref_key_unique<ref, refs...>{
+  static constexpr bool value = !is_ref_key_contained<ref, refs...>::value && is_ref_key_unique<refs...>::value;
+};
+
 // Tuple-of-Ref Indexer, which will index based on derived type
 
 template <ref_type T, size_t N, ref_type... Args>
