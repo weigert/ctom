@@ -76,6 +76,11 @@ template<unsigned N> constexpr_string(char const (&)[N]) ->constexpr_string<N-1>
 template<constexpr_string S>
 struct constexpr_key{};
 
+template<constexpr_string A, constexpr_string B>
+struct is_same_key {
+  static constexpr const bool value = std::is_same<constexpr_key<A>, constexpr_key<B>>::value;
+};
+
 // References to Base-Type Implementations
 //  Acts as an identifier for a ref to
 //  specific type implementations
@@ -107,7 +112,7 @@ template<
 >
 struct is_derived_ref<refA<keyA, A>, refB<keyB, B>> {
   static constexpr const bool value = is_derived<A, B>::value
-    && std::is_same<constexpr_key<keyA>, constexpr_key<keyB>>::value;
+    && is_same_key<keyA, keyB>::value;
 };
 
 // Ref in Argument Set
@@ -178,25 +183,6 @@ template <typename... Ts, typename F>
 constexpr void for_types(F&& f){
     (f.template operator()<Ts>(), ...);
 }
-
-/*
-
-// Unique Key in Key-Set
-
-template <typename... List>
-struct is_unique;
-
-template <>
-struct is_unique<> {
-    static constexpr bool value = true;
-};
-
-template <typename Head, typename... Tail>
-struct is_unique<Head, Tail...>{
-  static constexpr bool value = !is_contained<Head, Tail...>::value && is_unique<Tail...>::value;
-};
-
-*/
 
 /*
 ================================================================================
@@ -288,9 +274,8 @@ template<constexpr_string Key, obj_type T>
 using obj = ref_obj<Key, T>;
 
 template<ref_type... refs>
+requires(is_ref_key_unique<refs...>::value)
 struct obj_impl: obj_base {
-
-  //static_assert(unique_key_set<refs...>::value)
 
   std::tuple<node<refs>...> nodes;
 
@@ -332,6 +317,12 @@ struct obj_impl: obj_base {
     node.obj = v;
     return std::move(v);
   }
+
+  // Object Extension
+
+  template<ref_type... srefs>
+  using ext = obj_impl<refs..., srefs...>;
+
 };
 
 /*

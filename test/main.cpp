@@ -24,7 +24,7 @@ int main( int argc, char* args[] ) {
 
 	struct T_model: ctom::obj_impl <
 		ctom::val<"valA", int>,
-		ctom::arr<"array", int>,
+		ctom::arr<"array", B_model>,
 		ctom::obj<"object", B_model>,
 		ctom::val<"valB", int>
 	>{};
