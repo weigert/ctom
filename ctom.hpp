@@ -1,9 +1,11 @@
+#ifndef CTOM
+#define CTOM
+
 #include <iostream>
-
-
 #include <type_traits>
-#include <iomanip>
-#include <array>
+#include <tuple>
+#include <vector>
+#include <initializer_list>
 
 namespace ctom {
 
@@ -44,6 +46,24 @@ template<typename T>
 concept arr_type = std::derived_from<T, arr_base>;
 template<typename T>
 concept obj_type = std::derived_from<T, obj_base>;
+
+// Implementable Types
+
+template<typename V>
+concept is_val =
+    std::is_same_v<V, bool>
+||  std::is_same_v<V, char>
+||  std::is_same_v<V, int>
+||  std::is_same_v<V, long>
+||  std::is_same_v<V, size_t>
+||  std::is_same_v<V, float>
+||  std::is_same_v<V, double>;
+
+template<typename V>
+concept is_obj = obj_type<V>;
+
+template<typename V>
+concept is_arr = is_val<V> || obj_type<V>;
 
 // Constant Expression String
 //  Lets us use a string-literal as a template parameter
@@ -88,10 +108,10 @@ struct is_same_key {
 template<constexpr_string ref, val_type V>
 struct ref_val_impl: ref_base {};
 
-template<constexpr_string Key, arr_type T>
+template<constexpr_string ref, arr_type T>
 struct ref_arr_impl: ref_base {};
 
-template<constexpr_string Key, obj_type T>
+template<constexpr_string ref, obj_type T>
 struct ref_obj_impl: ref_base {};
 
 // Is Derived Ref
@@ -100,7 +120,7 @@ struct ref_obj_impl: ref_base {};
 
 template<typename A, typename B>
 struct is_derived {
-  static constexpr const bool value = std::is_base_of<B, A>::value;
+  static constexpr const bool value = std::is_base_of<B, A>::value || std::is_same<A, B>::value;
 };
 
 template<ref_type A, ref_type B>
@@ -111,6 +131,17 @@ template<
   template<constexpr_string, typename> typename refB, constexpr_string keyB, typename B
 >
 struct is_derived_ref<refA<keyA, A>, refB<keyB, B>> {
+  static constexpr const bool value = is_derived<A, B>::value
+    && is_same_key<keyA, keyB>::value;
+};
+
+template<typename T> struct arr_impl;
+
+template<
+  template<constexpr_string, typename> typename refA, constexpr_string keyA, typename A,
+  template<constexpr_string, typename> typename refB, constexpr_string keyB, typename B
+>
+struct is_derived_ref<refA<keyA, arr_impl<A>>, refB<keyB, arr_impl<B>>> {
   static constexpr const bool value = is_derived<A, B>::value
     && is_same_key<keyA, keyB>::value;
 };
@@ -128,7 +159,7 @@ struct is_contained<T> {
 template <typename T, typename Head, typename... Tail>
 struct is_contained<T, Head, Tail...>{
   static constexpr bool value =
-  std::is_same<T, Head>::value || std::is_base_of<Head, T>::value || is_contained<T, Tail...>::value;
+  std::is_same<T, Head>::value || is_derived<T, Head>::value || is_contained<T, Tail...>::value;
 };
 
 // Is Derived Ref Contained
@@ -268,44 +299,36 @@ using node_obj = node<ref_obj_impl<ref, T>>;
 ================================================================================
 */
 
-template<typename V>
-concept is_value =
-    std::is_same_v<V, bool>
-||  std::is_same_v<V, char>
-||  std::is_same_v<V, int>
-||  std::is_same_v<V, long>
-||  std::is_same_v<V, size_t>
-||  std::is_same_v<V, float>
-||  std::is_same_v<V, double>;
+// Value
 
-template<is_value V>
+template<is_val V>
 struct val_impl: val_base {
   V value;
 };
 
-template<constexpr_string ref, is_value V>
+template<constexpr_string ref, is_val V>
 using ref_val = ref_val_impl<ref, val_impl<V>>;
-template<constexpr_string ref, is_value V>
+template<constexpr_string ref, is_val V>
 using val = ref_val<ref, V>;
 
 // Array
 
 template<typename T>
 struct arr_impl: arr_base {
-  // std::vector<T> values;
+   std::vector<T> values;
 };
 
-template<constexpr_string ref, typename T>
+template<constexpr_string ref, is_arr T>
 using ref_arr = ref_arr_impl<ref, arr_impl<T>>;
-template<constexpr_string ref, typename T>
-using arr = ref_arr<ref, arr_impl<T>>;
+template<constexpr_string ref, is_arr T>
+using arr = ref_arr<ref, T>;
 
 // Object
 
-template<constexpr_string Key, obj_type T>
-using ref_obj = ref_obj_impl<Key, T>;
-template<constexpr_string Key, obj_type T>
-using obj = ref_obj<Key, T>;
+template<constexpr_string ref, is_obj T>
+using ref_obj = ref_obj_impl<ref, T>;
+template<constexpr_string ref, is_obj T>
+using obj = ref_obj<ref, T>;
 
 template<ref_type... refs>
 requires(is_ref_key_unique<refs...>::value)
@@ -334,23 +357,40 @@ struct obj_impl: obj_base {
 
   // Instance Value Assignment
 
-  template<constexpr_string ref, typename V>
-  V val(const V& v){
-    static_assert(is_value<V>, "type is not a value type");
-    static_assert(is_contained<ref_val<ref, V>, refs...>::value, "key for yaml::val does not exist in yaml::obj");
-    auto& node = get<ref_val<ref, V>>();
-    node.val.value = v;
-    return std::move(v);
+  template<constexpr_string ref, typename T>
+  auto val(const T& t){
+    static_assert(is_val<T>, "type is not a value type");
+    static_assert(is_ref_key_contained<ref_val<ref, T>, refs...>::value, "key does not exist in ctom::obj_impl");
+    static_assert(is_contained<ref_val<ref, T>, refs...>::value, "can't assign val key to improper type");
+    auto& node = get<ref_val<ref, T>>();
+    node.val.value = t;
+    return std::move(t);
   }
 
   template<constexpr_string ref, typename T>
-  T obj(const T& v){
-    static_assert(obj_type<T>, "type is not a derived type of yaml::obj");
-    static_assert(is_derived_ref_contained<ref_obj<ref, T>, refs...>::value, "key for yaml::obj does not exist in yaml::obj");
+  auto obj(const T& t){
+    static_assert(is_obj<T>, "type is not a derived type of ctom::obj_impl");
+    static_assert(is_ref_key_contained<ref_obj<ref, T>, refs...>::value, "key does not exist");
+    static_assert(is_derived_ref_contained<ref_obj<ref, T>, refs...>::value, "can't assign obj key to non-derived type");
     auto& node = get<ref_obj<ref, T>>();
-    node.obj = v;
-    return std::move(v);
+    node.obj = t;
+    return std::move(t);
   }
+
+  template<constexpr_string ref, typename T>
+  auto arr(const std::initializer_list<T>& t){
+    static_assert(is_arr<T>, "type is not a derived type of ctom::arr");
+    static_assert(is_ref_key_contained<ref_arr<ref, T>, refs...>::value, "key does not exist");
+    static_assert(is_derived_ref_contained<ref_arr<ref, T>, refs...>::value, "can't assign arr key to non-derived array type");
+    auto& node = get<ref_arr<ref, T>>();
+    //note: the node doesn't need to be populated by the actual
+    // values, but rather references to the value
+    // it requires its own indexing structure, etc..
+    //
+    node.arr.values = t;
+    return std::move(t);
+  }
+
 
   // Object Extension
 
@@ -456,3 +496,5 @@ void print(T& obj){
 }
 
 }
+
+#endif
