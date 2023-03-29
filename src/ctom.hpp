@@ -6,113 +6,93 @@
 #include <tuple>
 #include <vector>
 #include <initializer_list>
+#include "key.hpp"
 
 namespace ctom {
 
 /*
-ctom.hpp
-compile-time object model
-author: Nicholas McDonald 2023
-
-this namespace lets you define a compile-time object model using template
-meta-programming techniques. The object-model allows for fast (un)marshalling
-of various data formats, and is similar to semantic tags in golang.
-
-the original intent was a type-safe compile-time yaml parser.
+================================================================================
+                          CTOM Base Type Definitions
+================================================================================
 */
 
-// Basic Ref-Types
+// Base-Types, Base-Type Concepts
 
 struct ref_base{};
-struct val_base{
-  static constexpr const char * type = "val";
-};
-struct arr_base{
-  static constexpr const char * type = "arr";
-};
-struct obj_base{
-  static constexpr const char * type = "obj";
-};
+struct val_base{};
+struct arr_base{};
+struct obj_base{};
 
-// Base-Type Concepts
-//  Lets us defined templated derived types
-//  and still easily restrict parameters
-
-template<typename T>
-concept ref_type = std::derived_from<T, ref_base>;
-template<typename T>
-concept val_type = std::derived_from<T, val_base>;
-template<typename T>
-concept arr_type = std::derived_from<T, arr_base>;
-template<typename T>
-concept obj_type = std::derived_from<T, obj_base>;
-
-// Implementable Types
-
-template<typename V>
-concept is_val =
-    std::is_same_v<V, bool>
-||  std::is_same_v<V, char>
-||  std::is_same_v<V, int>
-||  std::is_same_v<V, long>
-||  std::is_same_v<V, size_t>
-||  std::is_same_v<V, float>
-||  std::is_same_v<V, double>;
-
-template<typename V>
-concept is_obj = obj_type<V>;
-
-template<typename V>
-concept is_arr = is_val<V> || obj_type<V>;
-
-// Constant Expression String
-//  Lets us use a string-literal as a template parameter
-
-template<size_t N> struct constexpr_string {
-
-  char value[N + 1] = {};
-  constexpr constexpr_string(const char (&_value)[N+1]) {
-      for (size_t n = 0; n < N; ++n)
-        value[n] = _value[n];
-  }
-
-  constexpr operator char const*() const { return value; }
-  constexpr char operator[](size_t n) const noexcept {
-		return value[n];
-	}
-  constexpr size_t size() const noexcept {
-		return N;
-	}
-  constexpr const char * begin() const noexcept {
-    return value;
-  }
-  constexpr const char * end() const noexcept {
-    return value + size();
-  }
-
-};
-template<unsigned N> constexpr_string(char const (&)[N]) ->constexpr_string<N-1>;
-
-template<constexpr_string S>
-struct constexpr_key{};
-
-template<constexpr_string A, constexpr_string B>
-struct is_same_key {
-  static constexpr const bool value = std::is_same<constexpr_key<A>, constexpr_key<B>>::value;
-};
+template<typename T> concept ref_type = std::derived_from<T, ctom::ref_base>;
+template<typename T> concept val_type = std::derived_from<T, ctom::val_base>;
+template<typename T> concept arr_type = std::derived_from<T, ctom::arr_base>;
+template<typename T> concept obj_type = std::derived_from<T, ctom::obj_base>;
 
 // References to Base-Type Implementations
 //  Acts as an identifier for a ref to
 //  specific type implementations
 
-template<constexpr_string ref, val_type V>
-struct ref_val_impl: ref_base {};
+template<constexpr_string ref, ctom::val_type V> struct ref_val: ctom::ref_base {};
+template<constexpr_string ref, ctom::arr_type T> struct ref_arr: ctom::ref_base {};
+template<constexpr_string ref, ctom::obj_type T> struct ref_obj: ctom::ref_base {};
 
-template<constexpr_string ref, arr_type T>
-struct ref_arr_impl: ref_base {};
+// Node-Types
+//  Nodes are templated by keys referencing their type
 
-template<constexpr_string ref, obj_type T>
-struct ref_obj_impl: ref_base {};
+template<ctom::ref_type ref> struct node {};
+
+template<constexpr_string ref, ctom::val_type T>
+struct node<ctom::ref_val<ref, T>> {
+  static constexpr char const* type = "val";
+  static constexpr char const* key = ref;
+  T val;
+};
+
+template<constexpr_string ref, ctom::arr_type T>
+struct node<ctom::ref_arr<ref, T>> {
+  static constexpr char const* type = "arr";
+  static constexpr char const* key = ref;
+  T arr;
+};
+
+template<constexpr_string ref, ctom::obj_type T>
+struct node<ctom::ref_obj<ref, T>> {
+  static constexpr char const* type = "obj";
+  static constexpr char const* key = ref;
+  T obj;
+};
+
+// Node Type Aliases
+
+template<constexpr_string ref, ctom::val_type T>
+using node_val = ctom::node<ctom::ref_val<ref, T>>;
+
+template<constexpr_string ref, ctom::arr_type T>
+using node_arr = ctom::node<ctom::ref_arr<ref, T>>;
+
+template<constexpr_string ref, ctom::obj_type T>
+using node_obj = ctom::node<ctom::ref_obj<ref, T>>;
+
+// Base Type Implementation Declarations
+
+template<typename T> struct val_impl;     // Val Parameterized by Single Type
+template<typename T> struct arr_impl;     // Arr Parameterized by Single Type
+template<typename... T> struct obj_impl;  // Obj Parameterized by Multiple Types
+
+template<constexpr_string ref, typename T>
+using val = ctom::ref_val<ref, val_impl<T>>;
+
+template<constexpr_string ref, typename T>
+using arr = ctom::ref_arr<ref, arr_impl<T>>;
+
+template<constexpr_string ref, typename T>
+using obj = ctom::ref_obj<ref, T>;
+
+/*
+================================================================================
+                              Helper Concepts
+================================================================================
+*/
 
 // Is Derived Ref
 //  Checks if two reference-types have the same key and point to
@@ -134,8 +114,6 @@ struct is_derived_ref<refA<keyA, A>, refB<keyB, B>> {
   static constexpr const bool value = is_derived<A, B>::value
     && is_same_key<keyA, keyB>::value;
 };
-
-template<typename T> struct arr_impl;
 
 template<
   template<constexpr_string, typename> typename refA, constexpr_string keyA, typename A,
@@ -249,49 +227,21 @@ constexpr void for_types(F&& f){
     (f.template operator()<Ts>(), ...);
 }
 
-/*
-================================================================================
-                        Template Meta Object Model
-================================================================================
-*/
+// Ref-Type Pack
 
-// Node-Type Declarations
-//  Structs which are templated by a specific ref type
-//  give us specific node types (with a required ref)
+template <typename... Ts> struct is_refs;
 
-template<ref_type ref> struct node {};
-
-template<constexpr_string ref, val_type T>
-struct node<ref_val_impl<ref, T>> {
-  static constexpr const char* type = "val";
-  static constexpr char const* key = ref;
-  T val;
+template <typename T> struct is_refs<T> {
+  static constexpr bool value = false;
 };
 
-template<constexpr_string ref, arr_type T>
-struct node<ref_arr_impl<ref, T>> {
-  static constexpr const char* type = "arr";
-  static constexpr char const* key = ref;
-  T arr;
+template <ref_type T> struct is_refs<T> {
+  static constexpr bool value = true;
 };
 
-template<constexpr_string ref, obj_type T>
-struct node<ref_obj_impl<ref, T>> {
-  static constexpr const char* type = "obj";
-  static constexpr char const* key = ref;
-  T obj;
+template <typename T, typename... Ts> struct is_refs<T, Ts...> {
+  static constexpr bool value = is_refs<T>::value && is_refs<Ts...>::value;
 };
-
-// Node Type Aliases
-
-template<constexpr_string ref, val_type T>
-using node_val = node<ref_val_impl<ref, T>>;
-
-template<constexpr_string ref, arr_type T>
-using node_arr = node<ref_arr_impl<ref, T>>;
-
-template<constexpr_string ref, obj_type T>
-using node_obj = node<ref_obj_impl<ref, T>>;
 
 /*
 ================================================================================
@@ -301,38 +251,41 @@ using node_obj = node<ref_obj_impl<ref, T>>;
 
 // Value
 
-template<is_val V>
+// Implementable Types
+
+template<typename V>
+concept is_val =
+    std::is_same_v<V, bool>
+||  std::is_same_v<V, char>
+||  std::is_same_v<V, int>
+||  std::is_same_v<V, long>
+||  std::is_same_v<V, size_t>
+||  std::is_same_v<V, float>
+||  std::is_same_v<V, double>;
+
+template<typename V>
 struct val_impl: val_base {
+  static_assert(is_val<V>, "template type for val_impl is not scalar");
   V value;
 };
 
-template<constexpr_string ref, is_val V>
-using ref_val = ref_val_impl<ref, val_impl<V>>;
-template<constexpr_string ref, is_val V>
-using val = ref_val<ref, V>;
-
 // Array
+
+template<typename V>
+concept is_arr = is_val<V> || obj_type<V>;
 
 template<typename T>
 struct arr_impl: arr_base {
    std::vector<T> values;
 };
 
-template<constexpr_string ref, is_arr T>
-using ref_arr = ref_arr_impl<ref, arr_impl<T>>;
-template<constexpr_string ref, is_arr T>
-using arr = ref_arr<ref, T>;
-
 // Object
 
-template<constexpr_string ref, is_obj T>
-using ref_obj = ref_obj_impl<ref, T>;
-template<constexpr_string ref, is_obj T>
-using obj = ref_obj<ref, T>;
-
-template<ref_type... refs>
-requires(is_ref_key_unique<refs...>::value)
+template<typename... refs>
 struct obj_impl: obj_base {
+
+  static_assert(is_refs<refs...>::value, "template parameters for obj are not of type ref");
+  static_assert(is_ref_key_unique<refs...>::value, "ref parameter keys for obj are not unique");
 
   std::tuple<node<refs>...> nodes;
 
@@ -360,16 +313,16 @@ struct obj_impl: obj_base {
   template<constexpr_string ref, typename T>
   auto val(const T& t){
     static_assert(is_val<T>, "type is not a value type");
-    static_assert(is_ref_key_contained<ref_val<ref, T>, refs...>::value, "key does not exist in ctom::obj_impl");
-    static_assert(is_contained<ref_val<ref, T>, refs...>::value, "can't assign val key to improper type");
-    auto& node = get<ref_val<ref, T>>();
+    static_assert(is_ref_key_contained<ctom::val<ref, T>, refs...>::value, "key does not exist in ctom::obj_impl");
+    static_assert(is_contained<ctom::val<ref, T>, refs...>::value, "can't assign val key to improper type");
+    auto& node = get<ctom::val<ref, T>>();
     node.val.value = t;
     return std::move(t);
   }
 
   template<constexpr_string ref, typename T>
   auto obj(const T& t){
-    static_assert(is_obj<T>, "type is not a derived type of ctom::obj_impl");
+    static_assert(obj_type<T>, "type is not a derived type of ctom::obj_impl");
     static_assert(is_ref_key_contained<ref_obj<ref, T>, refs...>::value, "key does not exist");
     static_assert(is_derived_ref_contained<ref_obj<ref, T>, refs...>::value, "can't assign obj key to non-derived type");
     auto& node = get<ref_obj<ref, T>>();
@@ -380,9 +333,9 @@ struct obj_impl: obj_base {
   template<constexpr_string ref, typename T>
   auto arr(const std::initializer_list<T>& t){
     static_assert(is_arr<T>, "type is not a derived type of ctom::arr");
-    static_assert(is_ref_key_contained<ref_arr<ref, T>, refs...>::value, "key does not exist");
-    static_assert(is_derived_ref_contained<ref_arr<ref, T>, refs...>::value, "can't assign arr key to non-derived array type");
-    auto& node = get<ref_arr<ref, T>>();
+    static_assert(is_ref_key_contained<ctom::arr<ref, T>, refs...>::value, "key does not exist");
+    static_assert(is_derived_ref_contained<ctom::arr<ref, T>, refs...>::value, "can't assign arr key to non-derived array type");
+    auto& node = get<ctom::arr<ref, T>>();
     //note: the node doesn't need to be populated by the actual
     // values, but rather references to the value
     // it requires its own indexing structure, etc..
@@ -413,28 +366,28 @@ struct printer {
 };
 
 template<constexpr_string ref, val_type T>
-struct printer<node<ref_val_impl<ref, T>>>{
+struct printer<node_val<ref, T>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-    std::cout<<val_base::type<<": ";
+    std::cout<<node_val<ref, T>::type<<": ";
     std::cout<<ref<<"\n";
   }
 };
 
 template<constexpr_string ref, arr_type T>
-struct printer<node<ref_arr_impl<ref, T>>>{
+struct printer<node_arr<ref, T>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-    std::cout<<arr_base::type<<": ";
+    std::cout<<node_arr<ref, T>::type<<": ";
     std::cout<<ref<<"\n";
   }
 };
 
 template<constexpr_string ref, obj_type T>
-struct printer<node<ref_obj_impl<ref, T>>>{
+struct printer<node_obj<ref, T>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-    std::cout<<obj_base::type<<": ";
+    std::cout<<node_obj<ref, T>::type<<": ";
     std::cout<<ref<<"\n";
     T::for_node::iter([&]<typename N>(){
       printer<N>::print(shift+1);
@@ -465,7 +418,7 @@ void print(){
 template<constexpr_string ref, val_type T>
 void print(node_val<ref, T>& node, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<val_base::type<<": ";
+  std::cout<<node_val<ref, T>::type<<": ";
   std::cout<<ref<<" = ";
   std::cout<<node.val.value<<"\n";
 }
@@ -473,7 +426,7 @@ void print(node_val<ref, T>& node, size_t shift = 0){
 template<constexpr_string ref, arr_type T>
 void print(node_arr<ref, T>& node, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<arr_base::type<<": ";
+  std::cout<<node_arr<ref, T>::type<<": ";
   std::cout<<ref<<" = ["<<"\n";
   for(size_t n = 0; n < node.arr.values.size(); n++){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
@@ -486,7 +439,7 @@ void print(node_arr<ref, T>& node, size_t shift = 0){
 template<constexpr_string ref, obj_type T>
 void print(node_obj<ref, T>& node, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<obj_base::type<<": ";
+  std::cout<<node_obj<ref, T>::type<<": ";
   std::cout<<ref<<"\n";
 
   std::apply([&](auto&&... args){

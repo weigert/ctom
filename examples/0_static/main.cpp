@@ -1,4 +1,4 @@
-#include "../../ctom.hpp"
+#include "../../src/ctom.hpp"
 
 int main( int argc, char* args[] ) {
 
