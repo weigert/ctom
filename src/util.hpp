@@ -18,3 +18,8 @@ template <typename... Ts, typename F>
 constexpr void for_types(F&& f){
     (f.template operator()<Ts>(), ...);
 }
+
+template<typename A, typename B>
+struct is_derived {
+  static constexpr bool value = std::is_base_of<B, A>::value;
+};

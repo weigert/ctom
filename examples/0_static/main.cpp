@@ -4,7 +4,6 @@ int main( int argc, char* args[] ) {
 
 	struct Foo: ctom::obj_impl<
 		ctom::val<"foo-int", int>,
-		ctom::val<"foo-int", int>,
 		ctom::val<"foo-float", float>,
 		ctom::val<"foo-double", double>
 	>{};
@@ -34,23 +33,6 @@ int main( int argc, char* args[] ) {
 		ctom::val<"root-int-2", int>
 	>{};
 
-
-
-	/*
-	// Abstract Object Models
-
-
-
-	// Abstract Model Extension
-	//	With reference to non-extended self
-
-
-
-	// Nested Object of Extension
-
-
-
-	*/
 	ctom::print<Root>();
 
 	return 0;
