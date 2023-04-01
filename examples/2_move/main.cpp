@@ -2,6 +2,12 @@
 #include <vector>
 #include <set>
 
+
+	template<size_t a>
+	struct test {
+
+	};
+
 int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
@@ -25,9 +31,16 @@ int main( int argc, char* args[] ) {
 	foo.c = 1.25;
 	ctom::print(foo);
 
-	foo.get<"foo-int", int>() = 3;
-	foo.get<"foo-float", float>() = 3;
-	foo.get<"foo-double", double>() = 3;
+	//"foo-int"_Foo_Impl=
+
+//	auto t = "foo-int"_t;
+
+//	foo["foo-int"_t] = 4;
+//	test<t>;
+
+	//foo.get<"foo-int">() = 3;
+	foo.get<"foo-float">() = 3;
+	foo.get<"foo-double">() = 3;
 
 	ctom::print(foo);
 

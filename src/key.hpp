@@ -24,10 +24,38 @@ template<size_t N> struct constexpr_string {
   }
 
 };
-template<unsigned N> constexpr_string(char const (&)[N]) ->constexpr_string<N-1>;
+template<size_t N> constexpr_string(char const (&)[N]) -> constexpr_string<N-1>;
+
+
+
+
+
+
+
+
 
 template<constexpr_string S>
 struct constexpr_key{};
+
+template<constexpr_string str>
+constexpr auto operator"" _t(){
+  return constexpr_key<str>{};
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 template<constexpr_string A, constexpr_string B>
 struct is_same_key {
