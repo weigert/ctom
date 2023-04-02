@@ -2,35 +2,35 @@
 
 int main( int argc, char* args[] ) {
 
-	struct Foo: ctom::obj_impl<
-		ctom::val<"foo-int", int>,
-		ctom::val<"foo-float", float>,
-		ctom::val<"foo-double", double>
+	struct Foo: ctom::obj<
+		ctom::key::val<"foo-int", int>,
+		ctom::key::val<"foo-float", float>,
+		ctom::key::val<"foo-double", double>
 	>{};
 
 	struct Foo_Ext: Foo::ext<
-		ctom::val<"foo-ext-int", int>,
-		ctom::obj<"foo-ext-foo", Foo>
+		ctom::key::val<"foo-ext-int", int>,
+		ctom::key::obj<"foo-ext-foo", Foo>
 	>{};
 
-	struct Bar: ctom::obj_impl<
-		ctom::obj<"bar-foo-ext", Foo_Ext>,
-		ctom::val<"bar-char", char>
+	struct Bar: ctom::obj<
+		ctom::key::obj<"bar-foo-ext", Foo_Ext>,
+		ctom::key::val<"bar-char", char>
 	>{};
 
 	// This needs to be constructed more easily!
 	//	For instance, through expansion!
 
-	struct Bar_arr: ctom::arr_impl<
-		ctom::_obj<0, Bar>,
-		ctom::_obj<1, Bar>
+	struct Bar_arr: ctom::arr<
+		ctom::ind::obj<0, Bar>,
+		ctom::ind::obj<1, Bar>
 	>{};
 
-	struct Root: ctom::obj_impl <
-		ctom::val<"root-int", int>,
-		ctom::arr<"root-bar-array", Bar_arr>,
-		ctom::obj<"root-bar", Bar>,
-		ctom::val<"root-int-2", int>
+	struct Root: ctom::obj<
+		ctom::key::val<"root-int", int>,
+		ctom::key::arr<"root-bar-array", Bar_arr>,
+		ctom::key::obj<"root-bar", Bar>,
+		ctom::key::val<"root-int-2", int>
 	>{};
 
 	ctom::print<Root>();

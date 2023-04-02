@@ -6,10 +6,10 @@ int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
 
-	struct Foo: ctom::obj_impl<
-		ctom::val<"foo-int", int>,
-		ctom::val<"foo-float", float>,
-		ctom::val<"foo-double", double>
+	struct Foo: ctom::obj<
+		ctom::key::val<"foo-int", int>,
+		ctom::key::val<"foo-float", float>,
+		ctom::key::val<"foo-double", double>
 	>{};
 
 	struct Foo_Impl: Foo {
@@ -33,8 +33,8 @@ int main( int argc, char* args[] ) {
 
 	// Nested Move
 
-	struct Bar: ctom::obj_impl<
-		ctom::obj<"foo", Foo>
+	struct Bar: ctom::obj<
+		ctom::key::obj<"foo", Foo>
 	>{};
 
 	struct Bar_Impl: Bar {

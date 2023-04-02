@@ -6,22 +6,23 @@ int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
 
-	struct Foo: ctom::obj_impl<
-		ctom::val<"foo-int", int>
+	struct Foo: ctom::obj<
+		ctom::key::val<"foo-int", int>
 	>{};
 
-	struct Bar: ctom::arr_impl<
-		ctom::_obj<0, Foo>,
-		ctom::_obj<1, Foo>,
-		ctom::_obj<2, Foo>
+	struct Bar: ctom::arr<
+		ctom::ind::obj<0, Foo>,
+		ctom::ind::obj<1, Foo>,
+		ctom::ind::obj<2, Foo>
 	>{};
 
-	struct Arr: ctom::arr_impl<
-		ctom::_arr<0, Bar>,
-		ctom::_arr<1, Bar>
+	struct Arr: ctom::arr<
+		ctom::ind::arr<0, Bar>,
+		ctom::ind::arr<1, Bar>
 	>{};
 
 	// Implementations
+
 	struct Foo_Impl: Foo {
 		int& x = Foo::val<"foo-int">(0);
 	};
@@ -38,7 +39,6 @@ int main( int argc, char* args[] ) {
 	} arr;
 
 	ctom::print(arr);
-
 
 	// Modify and Print
 

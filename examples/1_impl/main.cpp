@@ -6,31 +6,29 @@ int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
 
-	struct Arr: ctom::arr_impl<
-		ctom::_val<0, int>,
-		ctom::_val<1, int>,
-		ctom::_val<2, int>
+	struct Arr: ctom::arr<
+		ctom::ind::val<0, int>,
+		ctom::ind::val<1, int>,
+		ctom::ind::val<2, int>
 	>{};
 
-	struct Foo: ctom::obj_impl<
-		ctom::val<"foo-int", int>,
-		ctom::val<"foo-float", float>,
-		ctom::val<"foo-double", double>
-	//	ctom::arr<"float-arr", float>
+	struct Foo: ctom::obj<
+		ctom::key::val<"foo-int", int>,
+		ctom::key::val<"foo-float", float>,
+		ctom::key::val<"foo-double", double>
 	>{};
 
-	struct Bar: ctom::obj_impl<
-		ctom::obj<"bar-foo", Foo>,
-		ctom::val<"bar-char", char>,
-		ctom::arr<"int-arr", Arr>
+	struct Bar: ctom::obj<
+		ctom::key::obj<"bar-foo", Foo>,
+		ctom::key::val<"bar-char", char>,
+		ctom::key::arr<"int-arr", Arr>
 	>{};
 
-	struct Root: ctom::obj_impl <
-		ctom::val<"int", int>,
-		ctom::val<"float", float>,
-		ctom::val<"double", double>,
-	//	ctom::arr<"foo", Foo>,
-		ctom::obj<"bar", Bar>
+	struct Root: ctom::obj <
+		ctom::key::val<"int", int>,
+		ctom::key::val<"float", float>,
+		ctom::key::val<"double", double>,
+		ctom::key::obj<"bar", Bar>
 	>{};
 
 	// Concrete Implementations
