@@ -538,6 +538,7 @@ void print(ref_val<ref, T>& ref_val, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_val<T>::type<<": ";
   std::cout<<ref::key<<" = ";
+  if(ref_val.node.impl != NULL)
   std::cout<<ref_val.node.impl->value<<"\n";
 }
 
@@ -546,6 +547,7 @@ void print(ind_val<ind, T>& ind_val, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_val<T>::type<<": ";
   std::cout<<ind<<" = ";
+  if(ind_val.node.impl != NULL)
   std::cout<<ind_val.node.impl->value<<"\n";
 }
 
@@ -556,6 +558,7 @@ void print(ref_arr<ref, T>& ref_arr, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_arr<T>::type<<": ";
   std::cout<<ref::key<<" = ["<<"\n";
+  if(ref_arr.node.impl != NULL)
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
   }, ref_arr.node.impl->nodes);
@@ -568,6 +571,7 @@ void print(ref_obj<ref, T>& ref_obj, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_obj<T>::type<<": ";
   std::cout<<ref::key<<"\n";
+  if(ref_obj.node.impl != NULL)
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
   }, ref_obj.node.impl->nodes);
@@ -580,6 +584,7 @@ void print(ind_arr<ind, T>& ind_arr, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_arr<T>::type<<": ";
   std::cout<<ind<<" = ["<<"\n";
+  if(ind_arr.node.impl != NULL)
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
   }, ind_arr.node.impl->nodes);
@@ -592,6 +597,7 @@ void print(ind_obj<ind, T>& ind_obj, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_obj<T>::type<<": ";
   std::cout<<ind<<"\n";
+  if(ind_obj.node.impl != NULL)
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
   }, ind_obj.node.impl->nodes);

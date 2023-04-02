@@ -36,18 +36,18 @@ int main( int argc, char* args[] ) {
 	// Concrete Implementations
 
 	struct Foo_Impl: Foo {
-		int a 							= Foo::val<"foo-int">(10);
-		float b 						= Foo::val<"foo-float">(5.0f);
-		double c 						= Foo::val<"foo-double">(2.5);
+		int& a 							= Foo::val<"foo-int">(10);
+		float& b 						= Foo::val<"foo-float">(5.0f);
+		double& c 						= Foo::val<"foo-double">(2.5);
 	};
 
 	struct Bar_Impl: Bar {
-		Foo_Impl foo	= Bar::obj<"bar-foo">(Foo_Impl{});
-		char x 				= Bar::val<"bar-char">('y');
+		Foo_Impl& foo	= Bar::obj<"bar-foo", Foo_Impl>();
+		char& x 				= Bar::val<"bar-char">('y');
 	};
 
 	struct Root_Impl: Root {
-		Bar_Impl bar = Root::obj<"bar">(Bar_Impl{});
+		Bar_Impl& bar = Root::obj<"bar", Bar_Impl>();
 //		std::vector<Foo_Impl> foo = Root::arr<"foo">({Foo_Impl{}});
 	};
 
