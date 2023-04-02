@@ -8,8 +8,6 @@
 #include <initializer_list>
 #include "key.hpp"
 #include "util.hpp"
-#include <stdio.h>
-#include <string.h>
 
 namespace ctom {
 
@@ -19,18 +17,18 @@ namespace ctom {
 ================================================================================
 */
 
-struct node_base{};
-struct val_base{};
-struct arr_base{};
-struct obj_base{};
+struct node_t{};
+struct val_t{};
+struct arr_t{};
+struct obj_t{};
 
-template<typename T> concept node_type = std::derived_from<T, ctom::node_base>;
-template<typename T> concept val_type = std::derived_from<T, ctom::val_base>;
-template<typename T> concept arr_type = std::derived_from<T, ctom::arr_base>;
-template<typename T> concept obj_type = std::derived_from<T, ctom::obj_base>;
+template<typename T> concept node_t = std::derived_from<T, ctom::node_t>;
+template<typename T> concept val_t = std::derived_from<T, ctom::val_t>;
+template<typename T> concept arr_t = std::derived_from<T, ctom::arr_t>;
+template<typename T> concept obj_t = std::derived_from<T, ctom::obj_t>;
 
-template<ctom::val_type T>
-struct node_val: node_base {
+template<val_t T>
+struct node_val: node_t {
   static constexpr char const* type = "val";
   T* impl = NULL;
   ~node_val(){
@@ -38,8 +36,8 @@ struct node_val: node_base {
   }
 };
 
-template<ctom::arr_type T>
-struct node_arr: node_base {
+template<arr_t T>
+struct node_arr: node_t {
   static constexpr char const* type = "arr";
   T* impl = NULL;
   ~node_arr(){
@@ -47,8 +45,8 @@ struct node_arr: node_base {
   }
 };
 
-template<ctom::obj_type T>
-struct node_obj: node_base {
+template<obj_t T>
+struct node_obj: node_t {
   static constexpr char const* type = "obj";
   T* impl = NULL;
   ~node_obj(){
@@ -56,53 +54,93 @@ struct node_obj: node_base {
   }
 };
 
+// Static Check
+
+template<node_t NA, node_t NB>
+struct is_derived_node {
+  static constexpr bool value = false;
+};
+
+template <
+  template<typename> typename NA, val_t VA,
+  template<typename> typename NB, val_t VB
+> struct is_derived_node<NA<VA>, NB<VB>>{
+  static constexpr bool value = std::is_base_of<VB, VA>::value;
+};
+
+template <
+  template<typename> typename NA, arr_t VA,
+  template<typename> typename NB, arr_t VB
+> struct is_derived_node<NA<VA>, NB<VB>>{
+  static constexpr bool value = std::is_base_of<VB, VA>::value;
+};
+
+template <
+  template<typename> typename NA, obj_t VA,
+  template<typename> typename NB, obj_t VB
+> struct is_derived_node<NA<VA>, NB<VB>>{
+  static constexpr bool value = std::is_base_of<VB, VA>::value;
+};
+
 /*
 ================================================================================
-                            References and Indices
+                      Key, Index and Reference Types
 ================================================================================
 */
 
-struct ref_base{};
-struct ind_base{};
+struct ind_t{};
+struct key_t{};
+struct ref_t{};
 
-template<typename T> concept ref_type = std::derived_from<T, ctom::ref_base>;
-template<typename T> concept ind_type = std::derived_from<T, ctom::ind_base>;
+template<typename T> concept ind_t = std::derived_from<T, ctom::ind_t>;
+template<typename T> concept key_t = std::derived_from<T, ctom::key_t>;
+template<typename T> concept ref_t = std::derived_from<T, ctom::ref_t>;
+template<typename T> concept ind_key_t = ind_t<T> || key_t<T>;
 
-// References and Indices of Node Types
-
-template<key_type ref, ctom::node_type T>
-struct ref_node: ctom::ref_base{
-  T node;
+template<size_t S>
+struct ind_impl: ind_t {
+  static constexpr auto val = S;
 };
 
-template<size_t ind, ctom::node_type T>
-struct ind_node: ctom::ind_base{
-  T node;
+template<constexpr_string S>
+struct key_impl: key_t {
+  static constexpr auto val = S;
 };
+
+template<ind_key_t T, node_t N>
+struct ref_impl: ref_t {
+  N node;
+};
+
+// Node-Type Aliases
+
+template<ind_key_t IK, val_t T> using ref_val = ref_impl<IK, node_val<T>>;
+template<ind_key_t IK, arr_t T> using ref_arr = ref_impl<IK, node_arr<T>>;
+template<ind_key_t IK, obj_t T> using ref_obj = ref_impl<IK, node_obj<T>>;
+
+
+
+
+
+
+// I need to use user-defined class template automatic deduction
+
+// THESE ALIASES CAN PROBABLY BE RENAMED!!!!
+
 
 // Node-Implementation Forward Declarations
 
 template<typename T> struct val_impl;
-template<ctom::ind_type... T> struct arr_impl;
-template<ctom::ref_type... T> struct obj_impl;
+template<ref_t... T> struct arr_impl;
+template<ref_t... T> struct obj_impl;
 
-// Specific Node-Type Aliases
+template<constexpr_string ref, typename T> using val = ctom::ref_val<key_impl<ref>, ctom::val_impl<T>>;
+template<constexpr_string ref, arr_t T> using arr = ctom::ref_arr<key_impl<ref>, T>;
+template<constexpr_string ref, obj_t T> using obj = ctom::ref_obj<key_impl<ref>, T>;
 
-template<key_type ref, val_type T> using ref_val = ref_node<ref, ctom::node_val<T>>;
-template<key_type ref, arr_type T> using ref_arr = ref_node<ref, ctom::node_arr<T>>;
-template<key_type ref, obj_type T> using ref_obj = ref_node<ref, ctom::node_obj<T>>;
-
-template<constexpr_string ref, typename T> using val = ctom::ref_val<constexpr_key<ref>, ctom::val_impl<T>>;
-template<constexpr_string ref, arr_type T> using arr = ctom::ref_arr<constexpr_key<ref>, T>;
-template<constexpr_string ref, obj_type T> using obj = ctom::ref_obj<constexpr_key<ref>, T>;
-
-template<size_t ind, val_type T> using ind_val = ind_node<ind, ctom::node_val<T>>;
-template<size_t ind, arr_type T> using ind_arr = ind_node<ind, ctom::node_arr<T>>;
-template<size_t ind, obj_type T> using ind_obj = ind_node<ind, ctom::node_obj<T>>;
-
-template<size_t ind, typename T> using _val = ctom::ind_val<ind, ctom::val_impl<T>>;
-template<size_t ind, arr_type T> using _arr = ctom::ind_arr<ind, T>;
-template<size_t ind, obj_type T> using _obj = ctom::ind_obj<ind, T>;
+template<size_t ind, typename T> using _val = ctom::ref_val<ind_impl<ind>, ctom::val_impl<T>>;
+template<size_t ind, arr_t T> using _arr = ctom::ref_arr<ind_impl<ind>, T>;
+template<size_t ind, obj_t T> using _obj = ctom::ref_obj<ind_impl<ind>, T>;
 
 /*
 ================================================================================
@@ -110,171 +148,85 @@ template<size_t ind, obj_type T> using _obj = ctom::ind_obj<ind, T>;
 ================================================================================
 */
 
-template<typename A, typename B>
-struct is_ref_of {
+// static check if ind_key_t is the key of a ref_t
+
+template<typename T, ref_t R>
+struct is_same_ref {
   static constexpr bool value = false;
 };
 
-template <
-  key_type key,
-  template<typename, typename> typename ref, key_type refKey, typename T
-> struct is_ref_of<key, ref<refKey, T>>{
-  static constexpr bool value = is_same_key<key, refKey>::value;
-};
-
-template<size_t A, typename B>
-struct is_ind_of {
-  static constexpr bool value = false;
+template <ind_key_t IKA,
+  template<typename, typename> typename R, ind_key_t IKB, node_t N
+> struct is_same_ref<IKA, R<IKB, N>>{
+  static constexpr bool value = std::is_same<IKA, IKB>::value;
 };
 
 template <
-  size_t ind,
-  template<size_t, typename> typename ref, size_t refInd, typename T
-> struct is_ind_of<ind, ref<refInd, T>>{
-  static constexpr bool value = (ind == refInd);
+  template<typename, typename> typename RA, ind_key_t IKA, node_t NA,
+  template<typename, typename> typename RB, ind_key_t IKB, node_t NB
+> struct is_same_ref<RA<IKA, NA>, RB<IKB, NB>>{
+  static constexpr bool value = std::is_same<IKA, IKB>::value;
 };
 
+// static check if ind_key_t is the key of any ref_t
 
-
-
-template <key_type T, typename... Ts>
+template <typename T, ref_t... Rs>
 struct is_ref_contained;
 
-template <key_type T>
+template <typename T>
 struct is_ref_contained<T> {
   static constexpr bool value = false;
 };
 
-template <key_type A, typename B, typename... Ts>
-struct is_ref_contained<A, B, Ts...>{
-  static constexpr bool value = is_ref_of<A, B>::value
-    || is_ref_contained<A, Ts...>::value;
+template <ind_key_t IK, ref_t R, ref_t... Rs>
+struct is_ref_contained<IK, R, Rs...>{
+  static constexpr bool value = is_same_ref<IK, R>::value
+    || is_ref_contained<IK, Rs...>::value;
 };
 
-template <size_t T, typename... Ts>
-struct is_ind_contained;
-
-template <size_t T>
-struct is_ind_contained<T> {
-  static constexpr bool value = false;
+template <ref_t RA, ref_t RB, ref_t... Rs>
+struct is_ref_contained<RA, RB, Rs...>{
+  static constexpr bool value = is_same_ref<RA, RB>::value
+    || is_ref_contained<RA, Rs...>::value;
 };
 
-template <size_t A, typename B, typename... Ts>
-struct is_ind_contained<A, B, Ts...>{
-  static constexpr bool value = is_ind_of<A, B>::value
-    || is_ind_contained<A, Ts...>::value;
-};
+// static index fetch for ind_key_t in set of ref_t
 
-
-
-
-
-
-
-template <size_t N, key_type T, typename... Ts>
-struct ref_index {
-  static constexpr size_t value = N;
-};
-
-template <size_t N, key_type T>
-struct ref_index<N, T>{
-    static constexpr size_t value = N;
-};
-
-template <size_t N, key_type A, ref_type B, ref_type... Ts>
-requires(!is_ref_of<A, B>::value)
-struct ref_index<N, A, B, Ts...> {
-    static constexpr size_t value = ref_index<N + 1, A, Ts...>::value;
-};
-
-template <size_t N, size_t T, typename... Ts>
-struct ind_index {
-  static constexpr size_t value = N;
-};
-
-template <size_t N, size_t T>
-struct ind_index<N, T>{
-    static constexpr size_t value = N;
-};
-
-template <size_t N, size_t A, ref_type B, ref_type... Ts>
-requires(!is_ind_of<A, B>::value)
-struct ind_index<N, A, B, Ts...> {
-    static constexpr size_t value = ind_index<N + 1, A, Ts...>::value;
-};
-
-template<typename A, typename B>
-struct is_same_pair {
-  static constexpr bool value = false;
-};
-
-template <
-  template<typename, typename> typename refA, typename keyA, typename A,
-  template<typename, typename> typename refB, typename keyB, typename B
-> struct is_same_pair<refA<keyA, A>, refB<keyB, B>>{
-  static constexpr bool value = is_same_key<keyA, keyB>::value;
-};
-
-template <
-  template<size_t, typename> typename indA, size_t numA, typename A,
-  template<size_t, typename> typename indB, size_t numB, typename B
-> struct is_same_pair<indA<numA, A>, indB<numB, B>>{
-  static constexpr bool value = (numA == numB);
-};
-
-//
-
-template <typename... Ts>
-struct is_pair_contained;
-
-template <typename T>
-struct is_pair_contained<T> {
-  static constexpr bool value = false;
-};
-
-template <typename A, typename B, typename... Ts>
-struct is_pair_contained<A, B, Ts...>{
-  static constexpr bool value = is_same_pair<A, B>::value
-    || is_pair_contained<A, Ts...>::value;
-};
-
-//
-
-template <typename... Ts>
-struct is_pair_unique;
-
-template <>
-struct is_pair_unique<> {
-    static constexpr bool value = true;
-};
-
-template <typename T, typename... Ts>
-struct is_pair_unique<T, Ts...>{
-  static constexpr bool value = !is_pair_contained<T, Ts...>::value && is_pair_unique<Ts...>::value;
-};
-
-//
-
-template <size_t N, typename T, typename... Ts>
-struct pair_index {
+template <size_t N, typename T, ref_t... Rs>
+struct index_refs {
   static constexpr size_t value = N;
 };
 
 template <size_t N, typename T>
-struct pair_index<N, T>{
+struct index_refs<N, T>{
     static constexpr size_t value = N;
 };
 
-template <size_t N, ref_type A, ref_type B, ref_type... Ts>
-requires(!is_same_pair<A, B>::value)
-struct pair_index<N, A, B, Ts...> {
-    static constexpr size_t value = pair_index<N + 1, A, Ts...>::value;
+template <size_t N, ind_key_t IK, ref_t R, ref_t... Rs>
+requires(!is_same_ref<IK, R>::value)
+struct index_refs<N, IK, R, Rs...> {
+    static constexpr size_t value = index_refs<N + 1, IK, Rs...>::value;
 };
 
-template <size_t N, ind_type A, ind_type B, ind_type... Ts>
-requires(!is_same_pair<A, B>::value)
-struct pair_index<N, A, B, Ts...> {
-    static constexpr size_t value = pair_index<N + 1, A, Ts...>::value;
+template <size_t N, ref_t RA, ref_t RB, ref_t... Rs>
+requires(!is_same_ref<RA, RB>::value)
+struct index_refs<N, RA, RB, Rs...> {
+    static constexpr size_t value = index_refs<N + 1, RA, Rs...>::value;
+};
+
+//
+
+template <ref_t... Rs>
+struct is_ref_unique;
+
+template <>
+struct is_ref_unique<> {
+    static constexpr bool value = true;
+};
+
+template <ref_t R, ref_t... Rs>
+struct is_ref_unique<R, Rs...>{
+  static constexpr bool value = !is_ref_contained<R, Rs...>::value && is_ref_unique<Rs...>::value;
 };
 
 /*
@@ -284,7 +236,7 @@ struct pair_index<N, A, B, Ts...> {
 */
 
 template<typename T>
-struct val_impl: val_base {
+struct val_impl: val_t {
   T value;
   val_impl(){}
   val_impl(T&& t) noexcept {
@@ -292,24 +244,24 @@ struct val_impl: val_base {
 	}
 };
 
-template<ind_type... inds>
-struct arr_impl: arr_base {
+template<ref_t... inds>
+struct arr_impl: arr_t {
 
-  static_assert(is_pair_unique<inds...>::value, "ind parameter indices for arr are not unique");
+  static_assert(is_ref_unique<inds...>::value, "ind parameter indices for arr are not unique");
 
   std::tuple<inds...> nodes;
   static constexpr size_t size = std::tuple_size<std::tuple<inds...>>::value;
 
-  template<ind_type... sinds>
+  template<ref_t... sinds>
   using ext = obj_impl<inds..., sinds...>;
 
-  template<ind_type ind> struct index {
-    static constexpr size_t value = pair_index<0, ind, inds...>::value;
+  template<ref_t ind> struct index {
+    static constexpr size_t value = index_refs<0, ind, inds...>::value;
   };
 
-  template<ind_type ind>
+  template<ref_t ind>
   auto& get() {
-    static_assert(is_pair_contained<ind, inds...>::value, "index is out of bounds");
+    static_assert(is_ref_contained<ind, inds...>::value, "index is out of bounds");
     return std::get<index<ind>::value>(nodes);
   }
 
@@ -322,45 +274,38 @@ struct arr_impl: arr_base {
 
 };
 
-template<ref_type... refs>
-struct obj_impl: obj_base {
+template<ref_t... refs>
+struct obj_impl: obj_t {
 
-//  static_assert(is_pair_unique<refs...>::value, "ref parameter keys for obj are not unique");
+  static_assert(is_ref_unique<refs...>::value, "ref parameter keys for obj are not unique");
 
   std::tuple<refs...> nodes;
   static constexpr size_t size = std::tuple_size<std::tuple<refs...>>::value;
 
   // Extension
 
-  template<ref_type... srefs>
+  template<ref_t... srefs>
   using ext = obj_impl<refs..., srefs...>;
 
   // Indexing Methods for Both!
 
-  template<key_type ref> struct index {
-    static constexpr size_t value = ctom::ref_index<0, ref, refs...>::value;
+  template<ctom::key_t ref> struct index {
+    static constexpr size_t value = ctom::index_refs<0, ref, refs...>::value;
   };
 
-  template<ref_type ref> struct ref_index {
-    static constexpr size_t value = pair_index<0, ref, refs...>::value;
-  };
-
-  template<ref_type ref>
+  template<ref_t ref>
   auto& get() {
-    static_assert(is_pair_contained<ref, refs...>::value, "ref not found");
-    return std::get<ref_index<ref>::value>(nodes);
+    static_assert(is_ref_contained<ref, refs...>::value, "ref not found");
+    return std::get<ctom::index_refs<0, ref, refs...>::value>(nodes);
   }
-
 
   template<constexpr_string ref>
   constexpr auto& get() {
-    static_assert(is_ref_contained<constexpr_key<ref>, refs...>::value, "ref not found");
-    return std::get<index<constexpr_key<ref>>::value>(nodes).node.impl->value;
+    static_assert(is_ref_contained<key_impl<ref>, refs...>::value, "ref not found");
+    return std::get<index<key_impl<ref>>::value>(nodes).node.impl->value;
   }
 
-
-
-  template<key_type ref>
+  template<ctom::key_t ref>
   constexpr auto& get() {
     static_assert(is_ref_contained<ref, refs...>::value, "ref not found");
     return std::get<index<ref>::value>(nodes).node.impl;//.val.value;
@@ -371,9 +316,6 @@ struct obj_impl: obj_base {
     return *(get<T>());
   };
 
-
-
-
   struct for_node {
     template<typename F>
     static constexpr void iter(F&& f){
@@ -381,27 +323,11 @@ struct obj_impl: obj_base {
     }
   };
 
-
-
-/*
-  ~obj_impl(){
-    std::apply([&](auto&&... arg){
-      (delete arg.node.impl, ...);
-    }, nodes);
-  }
-*/
-
-
-
-
-
-
-
   // Instance Value Assignment
 
   template<constexpr_string key, typename T>
   auto& val(const T& t){
-    auto& ref = get<ctom::ref_val<constexpr_key<key>, val_impl<T>>>();
+    auto& ref = get<ctom::ref_val<key_impl<key>, val_impl<T>>>();
   //  static_assert(std::is_same<val_impl<T>, decltype(ref.node.impl)>::value, "can't assign val key to improper type");
     auto i = new val_impl<T>();
     ref.node.impl = i;
@@ -411,8 +337,8 @@ struct obj_impl: obj_base {
 
   template<constexpr_string key, typename T>
   auto& obj(){
-    auto& ref = get<ctom::ref_obj<constexpr_key<key>, T>>();
-  //  static_assert(is_derived<T, decltype(*(ref.node.impl))>::value, "can't assign obj key to non-derived type");
+    auto& ref = get<ctom::ref_obj<key_impl<key>, T>>();
+    static_assert(is_derived_node<node_obj<T>, decltype(ref.node)>::value, "can't assign obj key to non-derived type");
     auto t = new T();
     ref.node.impl = t;
     return *t;
@@ -420,7 +346,7 @@ struct obj_impl: obj_base {
 
   template<constexpr_string key, typename T>
   auto& arr(const std::initializer_list<T>& t){
-    auto& ref = get<ctom::ref_arr<constexpr_key<key>, T>>();
+    auto& ref = get<ctom::ref_arr<key_impl<key>, T>>();
   //  static_assert(is_derived<T, decltype(ref.node.impl)>::value, "can't assign arr key to non-derived type");
 
     ref.node.impl = std::move(t);
@@ -441,33 +367,33 @@ struct printer {
 
 // Ref-Type Printing
 
-template<key_type ref, val_type T>
-struct printer<ref_node<ref, node_val<T>>>{
+template<ctom::key_t ref, val_t T>
+struct printer<ref_impl<ref, node_val<T>>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<node_val<T>::type<<": ";
-    std::cout<<ref::key<<"\n";
+    std::cout<<ref::val<<"\n";
   }
 };
 
-template<key_type ref, arr_type T>
-struct printer<ref_node<ref, node_arr<T>>>{
+template<ctom::key_t ref, arr_t T>
+struct printer<ref_impl<ref, node_arr<T>>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<node_arr<T>::type<<": ";
-    std::cout<<ref::key<<"\n";
+    std::cout<<ref::val<<"\n";
     T::for_node::iter([&]<typename N>(){
       printer<N>::print(shift+1);
     });
   }
 };
 
-template<key_type ref, obj_type T>
-struct printer<ref_node<ref, node_obj<T>>>{
+template<ctom::key_t ref, obj_t T>
+struct printer<ref_impl<ref, node_obj<T>>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<node_obj<T>::type<<": ";
-    std::cout<<ref::key<<"\n";
+    std::cout<<ref::val<<"\n";
     T::for_node::iter([&]<typename N>(){
       printer<N>::print(shift+1);
     });
@@ -476,33 +402,33 @@ struct printer<ref_node<ref, node_obj<T>>>{
 
 // Ind-Type Printing
 
-template<size_t ind, val_type T>
-struct printer<ind_node<ind, node_val<T>>>{
+template<ctom::ind_t ind, val_t T>
+struct printer<ref_impl<ind, node_val<T>>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<node_val<T>::type<<": ";
-    std::cout<<ind<<"\n";
+    std::cout<<ind::val<<"\n";
   }
 };
 
-template<size_t ind, arr_type T>
-struct printer<ind_node<ind, node_arr<T>>>{
+template<ctom::ind_t ind, arr_t T>
+struct printer<ref_impl<ind, node_arr<T>>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<node_arr<T>::type<<": ";
-    std::cout<<ind<<"\n";
+    std::cout<<ind::val<<"\n";
     T::for_node::iter([&]<typename N>(){
       printer<N>::print(shift+1);
     });
   }
 };
 
-template<size_t ind, obj_type T>
-struct printer<ind_node<ind, node_obj<T>>>{
+template<ctom::ind_t ind, obj_t T>
+struct printer<ref_impl<ind, node_obj<T>>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<node_obj<T>::type<<": ";
-    std::cout<<ind<<"\n";
+    std::cout<<ind::val<<"\n";
     T::for_node::iter([&]<typename N>(){
       printer<N>::print(shift+1);
     });
@@ -511,7 +437,7 @@ struct printer<ind_node<ind, node_obj<T>>>{
 
 // Print an Object-Type Directly
 
-template<obj_type T>
+template<obj_t T>
 struct printer<T>{
   static void print(size_t shift = 0){
     T::for_node::iter([&]<typename N>(){
@@ -531,31 +457,31 @@ void print(){
 
 // Reference
 
-template<key_type ref, val_type T>
+template<ctom::key_t ref, val_t T>
 void print(ref_val<ref, T>& ref_val, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_val<T>::type<<": ";
-  std::cout<<ref::key<<" = ";
+  std::cout<<ref::val<<" = ";
   if(ref_val.node.impl != NULL)
   std::cout<<ref_val.node.impl->value<<"\n";
 }
 
-template<size_t ind, val_type T>
-void print(ind_val<ind, T>& ind_val, size_t shift = 0){
+template<ctom::ind_t ind, val_t T>
+void print(ref_val<ind, T>& ref_val, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_val<T>::type<<": ";
-  std::cout<<ind<<" = ";
-  if(ind_val.node.impl != NULL)
-  std::cout<<ind_val.node.impl->value<<"\n";
+  std::cout<<ind::val<<" = ";
+  if(ref_val.node.impl != NULL)
+  std::cout<<ref_val.node.impl->value<<"\n";
 }
 
 
 
-template<key_type ref, arr_type T>
+template<ctom::key_t ref, arr_t T>
 void print(ref_arr<ref, T>& ref_arr, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_arr<T>::type<<": ";
-  std::cout<<ref::key<<" = ["<<"\n";
+  std::cout<<ref::val<<" = ["<<"\n";
   if(ref_arr.node.impl != NULL)
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
@@ -564,11 +490,11 @@ void print(ref_arr<ref, T>& ref_arr, size_t shift = 0){
   std::cout<<"]"<<std::endl;
 }
 
-template<key_type ref, obj_type T>
+template<ctom::key_t ref, obj_t T>
 void print(ref_obj<ref, T>& ref_obj, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_obj<T>::type<<": ";
-  std::cout<<ref::key<<"\n";
+  std::cout<<ref::val<<"\n";
   if(ref_obj.node.impl != NULL)
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
@@ -577,33 +503,33 @@ void print(ref_obj<ref, T>& ref_obj, size_t shift = 0){
 
 // Index
 
-template<size_t ind, arr_type T>
-void print(ind_arr<ind, T>& ind_arr, size_t shift = 0){
+template<ctom::ind_t ind, arr_t T>
+void print(ref_arr<ind, T>& ref_arr, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_arr<T>::type<<": ";
-  std::cout<<ind<<" = ["<<"\n";
-  if(ind_arr.node.impl != NULL)
+  std::cout<<ind::val<<" = ["<<"\n";
+  if(ref_arr.node.impl != NULL)
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
-  }, ind_arr.node.impl->nodes);
+  }, ref_arr.node.impl->nodes);
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<"]"<<std::endl;
 }
 
-template<size_t ind, obj_type T>
-void print(ind_obj<ind, T>& ind_obj, size_t shift = 0){
+template<ctom::ind_t ind, obj_t T>
+void print(ref_obj<ind, T>& ref_obj, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_obj<T>::type<<": ";
-  std::cout<<ind<<"\n";
-  if(ind_obj.node.impl != NULL)
+  std::cout<<ind::val<<"\n";
+  if(ref_obj.node.impl != NULL)
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
-  }, ind_obj.node.impl->nodes);
+  }, ref_obj.node.impl->nodes);
 }
 
 // Entry-Point
 
-template<obj_type T>
+template<obj_t T>
 void print(T& obj){
   std::apply([](auto&&... args){
     (ctom::print(args), ...);
@@ -611,5 +537,12 @@ void print(T& obj){
 }
 
 }
+
+
+template<constexpr_string key>
+constexpr auto operator""_t(){
+  return ctom::key_impl<key>{};
+}
+
 
 #endif

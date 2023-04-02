@@ -49,6 +49,7 @@ int main( int argc, char* args[] ) {
 	ctom::print(foo);
 
 	bar.foo.a = 7;
+	bar.foo.b = 4.5;
 	ctom::print(bar);
 	ctom::print(bar.foo);
 
