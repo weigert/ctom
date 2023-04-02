@@ -41,9 +41,16 @@ int main( int argc, char* args[] ) {
 		double& c = Foo::val<"foo-double">(2.5);
 	};
 
+	struct Arr_Impl: Arr {
+		int& a = Arr::val<0, int>(9);
+		int& b = Arr::val<1, int>(7);
+		int& c = Arr::val<2, int>(5);
+	};
+
 	struct Bar_Impl: Bar {
 		Foo_Impl& foo	= Bar::obj<"bar-foo", Foo_Impl>();
 		char& x 			= Bar::val<"bar-char">('y');
+		Arr_Impl& arr = Bar::arr<"int-arr", Arr_Impl>();
 	};
 
 	struct Root_Impl: Root {
@@ -53,8 +60,14 @@ int main( int argc, char* args[] ) {
 	// Single Instantiation
 
 	Root_Impl root;
-	root["bar"_t]["bar-foo"_t]["foo-int"_t] = 7;
+	root["bar"_key]["bar-foo"_key]["foo-int"_key] = 7;
 	ctom::print(root);
+
+	Arr_Impl arr;
+	arr[ctom::ind_impl<0>{}] = 6;
+	arr[ctom::ind_impl<1>{}] = 3;
+	arr[ctom::ind_impl<2>{}] = 0;
+	ctom::print(arr);
 
 	Bar_Impl bar;
 	bar.x = 'x';
