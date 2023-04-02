@@ -32,19 +32,28 @@ template<typename T> concept obj_type = std::derived_from<T, ctom::obj_base>;
 template<ctom::val_type T>
 struct node_val: node_base {
   static constexpr char const* type = "val";
-  T* impl;
+  T* impl = NULL;
+  ~node_val(){
+    if(impl != NULL) delete impl;
+  }
 };
 
 template<ctom::arr_type T>
 struct node_arr: node_base {
   static constexpr char const* type = "arr";
-  T* impl;
+  T* impl = NULL;
+  ~node_arr(){
+    if(impl != NULL) delete impl;
+  }
 };
 
 template<ctom::obj_type T>
 struct node_obj: node_base {
   static constexpr char const* type = "obj";
-  T* impl;
+  T* impl = NULL;
+  ~node_obj(){
+    if(impl != NULL) delete impl;
+  }
 };
 
 /*
@@ -277,9 +286,7 @@ struct pair_index<N, A, B, Ts...> {
 template<typename T>
 struct val_impl: val_base {
   T value;
-
   val_impl(){}
-
   val_impl(T&& t) noexcept {
 		value = t;
 	}
@@ -359,13 +366,10 @@ struct obj_impl: obj_base {
     return std::get<index<ref>::value>(nodes).node.impl;//.val.value;
   }
 
-
-
-
-    template<typename T>
-    auto& operator[](T t){
-      return *(get<T>());
-    };
+  template<typename T>
+  auto& operator[](T t){
+    return *(get<T>());
+  };
 
 
 
@@ -379,23 +383,16 @@ struct obj_impl: obj_base {
 
 
 
-
+/*
   ~obj_impl(){
     std::apply([&](auto&&... arg){
       (delete arg.node.impl, ...);
     }, nodes);
   }
-
-
-
-
-
-/*
-  template<obj_type T>
-  operator T&() const {
-    return T();
-  } // conversion function
 */
+
+
+
 
 
 
@@ -406,9 +403,9 @@ struct obj_impl: obj_base {
   auto& val(const T& t){
     auto& ref = get<ctom::ref_val<constexpr_key<key>, val_impl<T>>>();
   //  static_assert(std::is_same<val_impl<T>, decltype(ref.node.impl)>::value, "can't assign val key to improper type");
-    auto v = new val_impl<T>();
-    v->value = t;
-    ref.node.impl = v;
+    auto i = new val_impl<T>();
+    ref.node.impl = i;
+    ref.node.impl->value = t;
     return ref.node.impl->value;
   }
 
@@ -417,7 +414,7 @@ struct obj_impl: obj_base {
     auto& ref = get<ctom::ref_obj<constexpr_key<key>, T>>();
   //  static_assert(is_derived<T, decltype(*(ref.node.impl))>::value, "can't assign obj key to non-derived type");
     auto t = new T();
-    ref.node.impl = t;//std::move(t);
+    ref.node.impl = t;
     return *t;
   }
 
@@ -425,6 +422,7 @@ struct obj_impl: obj_base {
   auto& arr(const std::initializer_list<T>& t){
     auto& ref = get<ctom::ref_arr<constexpr_key<key>, T>>();
   //  static_assert(is_derived<T, decltype(ref.node.impl)>::value, "can't assign arr key to non-derived type");
+
     ref.node.impl = std::move(t);
     return ref.node.impl;
   }

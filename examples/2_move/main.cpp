@@ -2,12 +2,6 @@
 #include <vector>
 #include <set>
 
-
-	template<size_t a>
-	struct test {
-
-	};
-
 int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
@@ -56,7 +50,10 @@ int main( int argc, char* args[] ) {
 
 	bar.foo.a = 7;
 	ctom::print(bar);
+	ctom::print(bar.foo);
 
+	Bar_Impl bar2;
+	ctom::print(bar2);
 
 	return 0;
 
