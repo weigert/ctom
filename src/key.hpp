@@ -26,22 +26,21 @@ template<size_t N> struct constexpr_string {
 };
 template<size_t N> constexpr_string(char const (&)[N]) -> constexpr_string<N-1>;
 
+// Constant Expression Key
 
-
-
-
-
-
-
+struct key_base{};
 
 template<constexpr_string S>
-struct constexpr_key{};
+struct constexpr_key: key_base{
+  static constexpr auto key = S;
+};
 
 template<constexpr_string str>
 constexpr auto operator"" _t(){
   return constexpr_key<str>{};
 }
 
+template<typename T> concept key_type = std::derived_from<T, key_base>;
 
 
 
@@ -51,13 +50,7 @@ constexpr auto operator"" _t(){
 
 
 
-
-
-
-
-
-
-template<constexpr_string A, constexpr_string B>
+template<key_type A, key_type B>
 struct is_same_key {
-  static constexpr const bool value = std::is_same<constexpr_key<A>, constexpr_key<B>>::value;
+  static constexpr const bool value = std::is_same<A, B>::value;
 };
