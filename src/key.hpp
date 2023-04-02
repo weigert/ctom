@@ -31,7 +31,7 @@ template<size_t N> constexpr_string(char const (&)[N]) -> constexpr_string<N-1>;
 struct key_base{};
 
 template<constexpr_string S>
-struct constexpr_key: key_base{
+struct constexpr_key: key_base {
   static constexpr auto key = S;
 };
 

@@ -10,10 +10,6 @@ Similar to a strict-typed, compile-time boost property tree.
 - static check keys for valid strings
 - potentially unify refs and inds using templates
 - implement aliases for esay array construction
-- implement the proper move semantics so values can be modified by the tree
-    using pointers.
-- make the get method not care about the underlying type,
-    so we can do easy indexing.
 
 this namespace lets you define a compile-time object model using template
 meta-programming techniques. The object-model allows for fast (un)marshalling

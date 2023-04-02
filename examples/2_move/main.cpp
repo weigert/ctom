@@ -37,6 +37,26 @@ int main( int argc, char* args[] ) {
 	foo.get<"foo-double">() = 3;
 	ctom::print(foo);
 
+	// Nested Move
+
+	struct Bar: ctom::obj_impl<
+		ctom::obj<"foo", Foo>
+	>{};
+
+	struct Bar_Impl: Bar {
+		Foo_Impl& foo = Bar::obj<"foo", Foo_Impl>();
+	};
+
+	Bar_Impl bar;
+	bar["foo"_t]["foo-int"_t] = 9;
+	bar["foo"_t]["foo-float"_t] = 2;
+	bar["foo"_t]["foo-double"_t] = 3;
+	ctom::print(bar);
+	ctom::print(foo);
+
+	bar.foo.a = 7;
+	ctom::print(bar);
+
 
 	return 0;
 

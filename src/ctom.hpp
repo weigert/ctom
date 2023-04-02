@@ -32,19 +32,19 @@ template<typename T> concept obj_type = std::derived_from<T, ctom::obj_base>;
 template<ctom::val_type T>
 struct node_val: node_base {
   static constexpr char const* type = "val";
-  T impl;
+  T* impl;
 };
 
 template<ctom::arr_type T>
 struct node_arr: node_base {
   static constexpr char const* type = "arr";
-  T impl;
+  T* impl;
 };
 
 template<ctom::obj_type T>
 struct node_obj: node_base {
   static constexpr char const* type = "obj";
-  T impl;
+  T* impl;
 };
 
 /*
@@ -345,19 +345,10 @@ struct obj_impl: obj_base {
   }
 
 
-
-  struct for_node {
-    template<typename F>
-    static constexpr void iter(F&& f){
-      for_types<refs...>(f);
-    }
-  };
-
-
   template<constexpr_string ref>
   constexpr auto& get() {
     static_assert(is_ref_contained<constexpr_key<ref>, refs...>::value, "ref not found");
-    return std::get<index<constexpr_key<ref>>::value>(nodes).node.impl.value;
+    return std::get<index<constexpr_key<ref>>::value>(nodes).node.impl->value;
   }
 
 
@@ -369,9 +360,21 @@ struct obj_impl: obj_base {
   }
 
 
-  template<typename T>
-  auto& operator[](T t){
-    return get<T>();
+
+
+    template<typename T>
+    auto& operator[](T t){
+      return *(get<T>());
+    };
+
+
+
+
+  struct for_node {
+    template<typename F>
+    static constexpr void iter(F&& f){
+      for_types<refs...>(f);
+    }
   };
 
 
@@ -381,7 +384,12 @@ struct obj_impl: obj_base {
 
 
 
-
+/*
+  template<obj_type T>
+  operator T&() const {
+    return T();
+  } // conversion function
+*/
 
 
 
@@ -391,23 +399,26 @@ struct obj_impl: obj_base {
   template<constexpr_string key, typename T>
   auto& val(const T& t){
     auto& ref = get<ctom::ref_val<constexpr_key<key>, val_impl<T>>>();
-    static_assert(std::is_same<val_impl<T>, decltype(ref.node.impl)>::value, "can't assign val key to improper type");
-    ref.node.impl.value = std::move(t);
-    return ref.node.impl.value;
+  //  static_assert(std::is_same<val_impl<T>, decltype(ref.node.impl)>::value, "can't assign val key to improper type");
+    auto v = new val_impl<T>();
+    v->value = t;
+    ref.node.impl = v;
+    return ref.node.impl->value;
   }
 
   template<constexpr_string key, typename T>
-  auto& obj(const T& t){
+  auto& obj(){
     auto& ref = get<ctom::ref_obj<constexpr_key<key>, T>>();
-    static_assert(is_derived<T, decltype(ref.node.impl)>::value, "can't assign obj key to non-derived type");
-    ref.node.impl = std::move(t);
-    return t;//ref.node.obj;
+  //  static_assert(is_derived<T, decltype(*(ref.node.impl))>::value, "can't assign obj key to non-derived type");
+    auto t = new T();
+    ref.node.impl = t;//std::move(t);
+    return *t;
   }
 
   template<constexpr_string key, typename T>
   auto& arr(const std::initializer_list<T>& t){
     auto& ref = get<ctom::ref_arr<constexpr_key<key>, T>>();
-    static_assert(is_derived<T, decltype(ref.node.impl)>::value, "can't assign arr key to non-derived type");
+  //  static_assert(is_derived<T, decltype(ref.node.impl)>::value, "can't assign arr key to non-derived type");
     ref.node.impl = std::move(t);
     return ref.node.impl;
   }
@@ -521,7 +532,7 @@ void print(ref_val<ref, T>& ref_val, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_val<T>::type<<": ";
   std::cout<<ref::key<<" = ";
-  std::cout<<ref_val.node.impl.value<<"\n";
+  std::cout<<ref_val.node.impl->value<<"\n";
 }
 
 template<size_t ind, val_type T>
@@ -529,7 +540,7 @@ void print(ind_val<ind, T>& ind_val, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<node_val<T>::type<<": ";
   std::cout<<ind<<" = ";
-  std::cout<<ind_val.node.impl.value<<"\n";
+  std::cout<<ind_val.node.impl->value<<"\n";
 }
 
 
@@ -541,7 +552,7 @@ void print(ref_arr<ref, T>& ref_arr, size_t shift = 0){
   std::cout<<ref::key<<" = ["<<"\n";
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
-  }, ref_arr.node.impl.nodes);
+  }, ref_arr.node.impl->nodes);
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<"]"<<std::endl;
 }
@@ -553,7 +564,7 @@ void print(ref_obj<ref, T>& ref_obj, size_t shift = 0){
   std::cout<<ref::key<<"\n";
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
-  }, ref_obj.node.impl.nodes);
+  }, ref_obj.node.impl->nodes);
 }
 
 // Index
@@ -565,7 +576,7 @@ void print(ind_arr<ind, T>& ind_arr, size_t shift = 0){
   std::cout<<ind<<" = ["<<"\n";
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
-  }, ind_arr.node.impl.nodes);
+  }, ind_arr.node.impl->nodes);
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
   std::cout<<"]"<<std::endl;
 }
@@ -577,7 +588,7 @@ void print(ind_obj<ind, T>& ind_obj, size_t shift = 0){
   std::cout<<ind<<"\n";
   std::apply([&](auto&&... args){
     (ctom::print(args, shift+1), ...);
-  }, ind_obj.node.impl.nodes);
+  }, ind_obj.node.impl->nodes);
 }
 
 // Entry-Point
