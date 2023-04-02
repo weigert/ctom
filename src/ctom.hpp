@@ -18,38 +18,19 @@ namespace ctom {
 */
 
 struct node_t{};
-struct val_t{};
-struct arr_t{};
-struct obj_t{};
+struct val_t{ static constexpr char const* type = "val"; };
+struct arr_t{ static constexpr char const* type = "arr"; };
+struct obj_t{ static constexpr char const* type = "obj"; };
 
 template<typename T> concept node_t = std::derived_from<T, ctom::node_t>;
 template<typename T> concept val_t = std::derived_from<T, ctom::val_t>;
 template<typename T> concept arr_t = std::derived_from<T, ctom::arr_t>;
 template<typename T> concept obj_t = std::derived_from<T, ctom::obj_t>;
 
-template<val_t T>
-struct node_val: node_t {
-  static constexpr char const* type = "val";
+template<typename T>
+struct node_impl: node_t {
   T* impl = NULL;
-  ~node_val(){
-    if(impl != NULL) delete impl;
-  }
-};
-
-template<arr_t T>
-struct node_arr: node_t {
-  static constexpr char const* type = "arr";
-  T* impl = NULL;
-  ~node_arr(){
-    if(impl != NULL) delete impl;
-  }
-};
-
-template<obj_t T>
-struct node_obj: node_t {
-  static constexpr char const* type = "obj";
-  T* impl = NULL;
-  ~node_obj(){
+  ~node_impl(){
     if(impl != NULL) delete impl;
   }
 };
@@ -114,9 +95,9 @@ struct ref_impl: ref_t {
 
 // Node-Type Aliases
 
-template<ind_key_t IK, val_t T> using ref_val = ref_impl<IK, node_val<T>>;
-template<ind_key_t IK, arr_t T> using ref_arr = ref_impl<IK, node_arr<T>>;
-template<ind_key_t IK, obj_t T> using ref_obj = ref_impl<IK, node_obj<T>>;
+template<ind_key_t IK, val_t T> using ref_val = ref_impl<IK, node_impl<T>>;
+template<ind_key_t IK, arr_t T> using ref_arr = ref_impl<IK, node_impl<T>>;
+template<ind_key_t IK, obj_t T> using ref_obj = ref_impl<IK, node_impl<T>>;
 
 
 
@@ -338,7 +319,7 @@ struct obj_impl: obj_t {
   template<constexpr_string key, typename T>
   auto& obj(){
     auto& ref = get<ctom::ref_obj<key_impl<key>, T>>();
-    static_assert(is_derived_node<node_obj<T>, decltype(ref.node)>::value, "can't assign obj key to non-derived type");
+    static_assert(is_derived_node<node_impl<T>, decltype(ref.node)>::value, "can't assign obj key to non-derived type");
     auto t = new T();
     ref.node.impl = t;
     return *t;
@@ -367,69 +348,34 @@ struct printer {
 
 // Ref-Type Printing
 
-template<ctom::key_t ref, val_t T>
-struct printer<ref_impl<ref, node_val<T>>>{
+template<ctom::ind_key_t ref, val_t T>
+struct printer<ref_val<ref, T>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-    std::cout<<node_val<T>::type<<": ";
+    std::cout<<T::type<<": ";
     std::cout<<ref::val<<"\n";
   }
 };
 
-template<ctom::key_t ref, arr_t T>
-struct printer<ref_impl<ref, node_arr<T>>>{
+template<ctom::ind_key_t ref, arr_t T>
+struct printer<ref_arr<ref, T>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-    std::cout<<node_arr<T>::type<<": ";
+    std::cout<<T::type<<": ";
     std::cout<<ref::val<<"\n";
-    T::for_node::iter([&]<typename N>(){
+    T::for_node::iter([shift]<typename N>(){
       printer<N>::print(shift+1);
     });
   }
 };
 
-template<ctom::key_t ref, obj_t T>
-struct printer<ref_impl<ref, node_obj<T>>>{
+template<ctom::ind_key_t ref, obj_t T>
+struct printer<ref_obj<ref, T>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-    std::cout<<node_obj<T>::type<<": ";
+    std::cout<<T::type<<": ";
     std::cout<<ref::val<<"\n";
-    T::for_node::iter([&]<typename N>(){
-      printer<N>::print(shift+1);
-    });
-  }
-};
-
-// Ind-Type Printing
-
-template<ctom::ind_t ind, val_t T>
-struct printer<ref_impl<ind, node_val<T>>>{
-  static void print(size_t shift = 0){
-    for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-    std::cout<<node_val<T>::type<<": ";
-    std::cout<<ind::val<<"\n";
-  }
-};
-
-template<ctom::ind_t ind, arr_t T>
-struct printer<ref_impl<ind, node_arr<T>>>{
-  static void print(size_t shift = 0){
-    for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-    std::cout<<node_arr<T>::type<<": ";
-    std::cout<<ind::val<<"\n";
-    T::for_node::iter([&]<typename N>(){
-      printer<N>::print(shift+1);
-    });
-  }
-};
-
-template<ctom::ind_t ind, obj_t T>
-struct printer<ref_impl<ind, node_obj<T>>>{
-  static void print(size_t shift = 0){
-    for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-    std::cout<<node_obj<T>::type<<": ";
-    std::cout<<ind::val<<"\n";
-    T::for_node::iter([&]<typename N>(){
+    T::for_node::iter([shift]<typename N>(){
       printer<N>::print(shift+1);
     });
   }
@@ -440,7 +386,7 @@ struct printer<ref_impl<ind, node_obj<T>>>{
 template<obj_t T>
 struct printer<T>{
   static void print(size_t shift = 0){
-    T::for_node::iter([&]<typename N>(){
+    T::for_node::iter([shift]<typename N>(){
       printer<N>::print(shift);
     });
   }
@@ -457,30 +403,19 @@ void print(){
 
 // Reference
 
-template<ctom::key_t ref, val_t T>
+template<ctom::ind_key_t ref, val_t T>
 void print(ref_val<ref, T>& ref_val, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<node_val<T>::type<<": ";
+  std::cout<<T::type<<": ";
   std::cout<<ref::val<<" = ";
   if(ref_val.node.impl != NULL)
   std::cout<<ref_val.node.impl->value<<"\n";
 }
 
-template<ctom::ind_t ind, val_t T>
-void print(ref_val<ind, T>& ref_val, size_t shift = 0){
-  for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<node_val<T>::type<<": ";
-  std::cout<<ind::val<<" = ";
-  if(ref_val.node.impl != NULL)
-  std::cout<<ref_val.node.impl->value<<"\n";
-}
-
-
-
-template<ctom::key_t ref, arr_t T>
+template<ctom::ind_key_t ref, arr_t T>
 void print(ref_arr<ref, T>& ref_arr, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<node_arr<T>::type<<": ";
+  std::cout<<T::type<<": ";
   std::cout<<ref::val<<" = ["<<"\n";
   if(ref_arr.node.impl != NULL)
   std::apply([&](auto&&... args){
@@ -490,36 +425,10 @@ void print(ref_arr<ref, T>& ref_arr, size_t shift = 0){
   std::cout<<"]"<<std::endl;
 }
 
-template<ctom::key_t ref, obj_t T>
-void print(ref_obj<ref, T>& ref_obj, size_t shift = 0){
-  for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<node_obj<T>::type<<": ";
-  std::cout<<ref::val<<"\n";
-  if(ref_obj.node.impl != NULL)
-  std::apply([&](auto&&... args){
-    (ctom::print(args, shift+1), ...);
-  }, ref_obj.node.impl->nodes);
-}
-
-// Index
-
-template<ctom::ind_t ind, arr_t T>
-void print(ref_arr<ind, T>& ref_arr, size_t shift = 0){
-  for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<node_arr<T>::type<<": ";
-  std::cout<<ind::val<<" = ["<<"\n";
-  if(ref_arr.node.impl != NULL)
-  std::apply([&](auto&&... args){
-    (ctom::print(args, shift+1), ...);
-  }, ref_arr.node.impl->nodes);
-  for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<"]"<<std::endl;
-}
-
-template<ctom::ind_t ind, obj_t T>
+template<ctom::ind_key_t ind, obj_t T>
 void print(ref_obj<ind, T>& ref_obj, size_t shift = 0){
   for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<node_obj<T>::type<<": ";
+  std::cout<<T::type<<": ";
   std::cout<<ind::val<<"\n";
   if(ref_obj.node.impl != NULL)
   std::apply([&](auto&&... args){
@@ -536,13 +445,11 @@ void print(T& obj){
   }, obj.nodes);
 }
 
-}
-
+} // End of Namespace
 
 template<constexpr_string key>
 constexpr auto operator""_t(){
   return ctom::key_impl<key>{};
 }
-
 
 #endif
