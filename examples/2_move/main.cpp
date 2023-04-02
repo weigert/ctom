@@ -25,23 +25,16 @@ int main( int argc, char* args[] ) {
 	};
 
 	Foo_Impl foo;
+	ctom::print(foo);
 
 	foo.a = 5;
 	foo.b = 2.5f;
 	foo.c = 1.25;
 	ctom::print(foo);
 
-	//"foo-int"_Foo_Impl=
-
-//	auto t = "foo-int"_t;
-
-//	foo["foo-int"_t] = 4;
-//	test<t>;
-
-	//foo.get<"foo-int">() = 3;
+	foo["foo-int"_t] = 4;
 	foo.get<"foo-float">() = 3;
 	foo.get<"foo-double">() = 3;
-
 	ctom::print(foo);
 
 

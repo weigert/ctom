@@ -101,14 +101,14 @@ template<size_t ind, obj_type T> using _obj = ctom::ind_obj<ind, T>;
 ================================================================================
 */
 
-template<key_type A, typename B>
+template<typename A, typename B>
 struct is_ref_of {
   static constexpr bool value = false;
 };
 
 template <
   key_type key,
-  template<key_type, typename> typename ref, key_type refKey, typename T
+  template<typename, typename> typename ref, key_type refKey, typename T
 > struct is_ref_of<key, ref<refKey, T>>{
   static constexpr bool value = is_same_key<key, refKey>::value;
 };
@@ -200,8 +200,8 @@ struct is_same_pair {
 };
 
 template <
-  template<key_type, typename> typename refA, key_type keyA, typename A,
-  template<key_type, typename> typename refB, key_type keyB, typename B
+  template<typename, typename> typename refA, typename keyA, typename A,
+  template<typename, typename> typename refB, typename keyB, typename B
 > struct is_same_pair<refA<keyA, A>, refB<keyB, B>>{
   static constexpr bool value = is_same_key<keyA, keyB>::value;
 };
@@ -338,11 +338,7 @@ struct obj_impl: obj_base {
     return std::get<ref_index<ref>::value>(nodes);
   }
 
-  template<key_type ref>
-  constexpr auto& get() {
-    static_assert(is_ref_contained<ref, refs...>::value, "ref not found");
-    return std::get<index<ref>::value>(nodes).node.val.value;
-  }
+
 
   struct for_node {
     template<typename F>
@@ -352,15 +348,24 @@ struct obj_impl: obj_base {
   };
 
 
+  template<constexpr_string ref>
+  constexpr auto& get() {
+    static_assert(is_ref_contained<constexpr_key<ref>, refs...>::value, "ref not found");
+    return std::get<index<constexpr_key<ref>>::value>(nodes).node.val.value;
+  }
 
 
 
+  template<key_type ref>
+  constexpr auto& get() {
+    static_assert(is_ref_contained<ref, refs...>::value, "ref not found");
+    return std::get<index<ref>::value>(nodes).node.val.value;
+  }
 
 
   template<typename T>
   auto& operator[](T t){
     return get<T>();
-    return 0;
   };
 
 
@@ -379,7 +384,7 @@ struct obj_impl: obj_base {
 
   template<constexpr_string key, typename T>
   auto& val(const T& t){
-    auto& ref = get<ctom::val<key, T>>();
+    auto& ref = get<ctom::ref_val<constexpr_key<key>, val_impl<T>>>();
     static_assert(std::is_same<val_impl<T>, decltype(ref.node.val)>::value, "can't assign val key to improper type");
     ref.node.val.value = std::move(t);
     return ref.node.val.value;
