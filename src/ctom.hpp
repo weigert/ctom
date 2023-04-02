@@ -380,6 +380,12 @@ struct obj_impl: obj_base {
 
 
 
+  ~obj_impl(){
+    std::apply([&](auto&&... arg){
+      (delete arg.node.impl, ...);
+    }, nodes);
+  }
+
 
 
 
