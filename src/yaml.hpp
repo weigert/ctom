@@ -79,23 +79,21 @@ void marshal(ref_impl<IK, node_impl<T>>& ref, std::string prefix){
 
 template<ctom::ind_t IK, arr_t T>
 void marshal(ref_impl<IK, node_impl<T>>& ref, std::string prefix){
-    std::cout<<prefix<<"- ";
+    std::cout<<prefix<<"-\n";
     if(ref.node.impl != NULL)
     std::apply([&](auto&&... args){
-        ([&](){
-          //  std::cout<<prefix<<"  -";
-            ctom::yaml::marshal(args, prefix + "  ");
-        }(), ...);
+        (ctom::yaml::marshal(args, prefix + "  "), ...);
     }, ref.node.impl->nodes);
 }
 
 template<ctom::ind_t IK, obj_t T>
 void marshal(ref_impl<IK, node_impl<T>>& ref, std::string prefix){
-    std::cout<<prefix<<"- ";
+    std::cout<<prefix<<"-\n";
     if(ref.node.impl != NULL)
     std::apply([&](auto&&... args){
+        int i = 0;
         ([&](){
-        //    std::cout<<args.val;//<<std::endl;
+       //     if(i++ == 0) ctom::yaml::marshal(args, prefix + "  ");
             ctom::yaml::marshal(args, prefix + "  ");
         }(), ...);
     }, ref.node.impl->nodes);
