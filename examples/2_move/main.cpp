@@ -26,7 +26,7 @@ int main( int argc, char* args[] ) {
 	foo.c = 1.25;
 	ctom::print(foo);
 
-	foo["foo-int"_key] = 4;
+	foo.get<"foo-int">() = 4;
 	foo.get<"foo-float">() = 3;
 	foo.get<"foo-double">() = 3;
 	ctom::print(foo);
@@ -42,9 +42,9 @@ int main( int argc, char* args[] ) {
 	};
 
 	Bar_Impl bar;
-	bar["foo"_key]["foo-int"_key] = 9;
-	bar["foo"_key]["foo-float"_key] = 2;
-	bar["foo"_key]["foo-double"_key] = 3;
+	bar.get<"foo">().get<"foo-int">() = 9;
+	bar.get<"foo">().get<"foo-float">() = 2;
+	bar.get<"foo">().get<"foo-double">() = 3;
 	ctom::print(bar);
 	ctom::print(foo);
 

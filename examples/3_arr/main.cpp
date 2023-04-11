@@ -50,12 +50,12 @@ int main( int argc, char* args[] ) {
 	arr.barB.fooC.x = 6;
 	ctom::print(arr);
 
-	arr[ctom::ind_impl<0>{}][ctom::ind_impl<0>{}]["foo-int"_key] = 7;
-	arr[ctom::ind_impl<0>{}][ctom::ind_impl<1>{}]["foo-int"_key] = 8;
-	arr[ctom::ind_impl<0>{}][ctom::ind_impl<2>{}]["foo-int"_key] = 9;
-	arr[ctom::ind_impl<1>{}][ctom::ind_impl<0>{}]["foo-int"_key] = 0;
-	arr[ctom::ind_impl<1>{}][ctom::ind_impl<1>{}]["foo-int"_key] = 1;
-	arr[ctom::ind_impl<1>{}][ctom::ind_impl<2>{}]["foo-int"_key] = 2;
+	arr.get<0>().get<0>().get<"foo-int">() = 7;
+	arr.get<0>().get<1>().get<"foo-int">() = 8;
+	arr.get<0>().get<2>().get<"foo-int">() = 9;
+	arr.get<1>().get<0>().get<"foo-int">() = 0;
+	arr.get<1>().get<1>().get<"foo-int">() = 1;
+	arr.get<1>().get<2>().get<"foo-int">() = 2;
 	ctom::print(arr);
 
 	return 0;

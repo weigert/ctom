@@ -31,6 +31,14 @@ struct node_impl: node_base {
   ~node_impl(){
     if(impl != NULL) delete impl;
   }
+  template<typename V>
+  void operator=(const V& v){
+    *impl = v;
+  }
+  template<typename V>
+  void operator=(const V&& v){
+    *impl = v;
+  }
 };
 
 // Static Check
@@ -261,6 +269,12 @@ struct val_impl: val_base {
   val_impl(T&& t) noexcept {
 		value = t;
 	}
+  void operator=(const T& v){
+    value = v;
+  }
+  void operator=(const T&& v){
+    value = v;
+  }
 };
 
 // Array
@@ -288,13 +302,8 @@ struct arr_impl: arr_base {
 
   template<size_t ind>
   constexpr auto& get() {
-    return get<ind_impl<ind>>().node.impl->value;
+    return *get<ind_impl<ind>>().node.impl;
   }
-
-  template<ind_t ind>
-  auto& operator[](ind){
-    return *(get<ind>().node.impl);
-  };
 
   struct for_node {
     template<typename F>
@@ -359,6 +368,11 @@ struct obj_impl: obj_base {
   constexpr auto& get() {
     static_assert(is_ref_contained<ref, refs...>::value, "ref not found");
     return std::get<index<ref>::value>(nodes);
+  }
+
+  template<constexpr_string s>
+  constexpr auto& get() {
+    return *get<key_impl<s>>().node.impl;
   }
 
   struct for_node {
