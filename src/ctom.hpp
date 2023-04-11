@@ -115,6 +115,7 @@ template<typename T> concept ind_key_t = ind_t<T> || key_t<T>;
 
 template<ind_key_t T, node_t N>
 struct ref_impl: ref_base {
+  static constexpr auto val = T::val;
   N node;
 };
 
