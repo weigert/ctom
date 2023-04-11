@@ -57,8 +57,12 @@ int main( int argc, char* args[] ) {
 
 	// Single Instantiation
 
+
 	Root_Impl root;
-	root["bar"_key]["bar-foo"_key]["foo-int"_key] = 7;
+	//root["bar"_key]["bar-foo"_key]["foo-int"_key] = 7;
+
+	//root.getm<"bar", "bar-foo">();
+
 	ctom::print(root);
 
 	Arr_Impl arr;

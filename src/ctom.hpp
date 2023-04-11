@@ -6,7 +6,6 @@
 #include <tuple>
 #include <vector>
 #include <initializer_list>
-#include "key.hpp"
 
 namespace ctom {
 
@@ -16,18 +15,18 @@ namespace ctom {
 ================================================================================
 */
 
-struct node_t{};
-struct val_t{ static constexpr char const* type = "val"; };
-struct arr_t{ static constexpr char const* type = "arr"; };
-struct obj_t{ static constexpr char const* type = "obj"; };
+struct node_base{};
+struct val_base{ static constexpr char const* type = "val"; };
+struct arr_base{ static constexpr char const* type = "arr"; };
+struct obj_base{ static constexpr char const* type = "obj"; };
 
-template<typename T> concept node_t = std::derived_from<T, ctom::node_t>;
-template<typename T> concept val_t = std::derived_from<T, ctom::val_t>;
-template<typename T> concept arr_t = std::derived_from<T, ctom::arr_t>;
-template<typename T> concept obj_t = std::derived_from<T, ctom::obj_t>;
+template<typename T> concept node_t = std::derived_from<T, ctom::node_base>;
+template<typename T> concept val_t = std::derived_from<T, ctom::val_base>;
+template<typename T> concept arr_t = std::derived_from<T, ctom::arr_base>;
+template<typename T> concept obj_t = std::derived_from<T, ctom::obj_base>;
 
 template<typename T>
-struct node_impl: node_t {
+struct node_impl: node_base {
   T* impl = NULL;
   ~node_impl(){
     if(impl != NULL) delete impl;
@@ -64,31 +63,62 @@ template <
 
 /*
 ================================================================================
+                          constexpr_string helper
+================================================================================
+*/
+
+template<size_t N> struct constexpr_string {
+
+  char value[N + 1] = {};
+  constexpr constexpr_string(const char (&_value)[N+1]) {
+      for (size_t n = 0; n < N; ++n)
+        value[n] = _value[n];
+  }
+
+  constexpr operator char const*() const { return value; }
+  constexpr char operator[](size_t n) const noexcept {
+		return value[n];
+	}
+  constexpr size_t size() const noexcept {
+		return N;
+	}
+  constexpr const char * begin() const noexcept {
+    return value;
+  }
+  constexpr const char * end() const noexcept {
+    return value + size();
+  }
+
+};
+template<size_t N> constexpr_string(char const (&)[N]) -> constexpr_string<N-1>;
+
+/*
+================================================================================
                       Key, Index and Reference Types
 ================================================================================
 */
 
-struct ind_t{};
-struct key_t{};
-struct ref_t{};
+struct ind_base{};
+struct key_base{};
+struct ref_base{};
 
-template<typename T> concept ind_t = std::derived_from<T, ctom::ind_t>;
-template<typename T> concept key_t = std::derived_from<T, ctom::key_t>;
-template<typename T> concept ref_t = std::derived_from<T, ctom::ref_t>;
+template<typename T> concept ind_t = std::derived_from<T, ctom::ind_base>;
+template<typename T> concept key_t = std::derived_from<T, ctom::key_base>;
+template<typename T> concept ref_t = std::derived_from<T, ctom::ref_base>;
 template<typename T> concept ind_key_t = ind_t<T> || key_t<T>;
 
 template<ind_key_t T, node_t N>
-struct ref_impl: ref_t {
+struct ref_impl: ref_base {
   N node;
 };
 
 template<size_t S>
-struct ind_impl: ind_t {
+struct ind_impl: ind_base {
   static constexpr auto val = S;
 };
 
 template<constexpr_string S>
-struct key_impl: key_t {
+struct key_impl: key_base {
   static constexpr auto val = S;
 };
 
@@ -225,7 +255,7 @@ template<key_ref_t... T> struct obj_impl;
 // Value
 
 template<typename T>
-struct val_impl: val_t {
+struct val_impl: val_base {
   T value;
   val_impl(){}
   val_impl(T&& t) noexcept {
@@ -236,7 +266,7 @@ struct val_impl: val_t {
 // Array
 
 template<ind_ref_t... inds>
-struct arr_impl: arr_t {
+struct arr_impl: arr_base {
 
   static_assert(is_ref_unique<inds...>::value, "indices for arr are not unique");
 
@@ -307,7 +337,7 @@ struct arr_impl: arr_t {
 // Object
 
 template<key_ref_t... refs>
-struct obj_impl: obj_t {
+struct obj_impl: obj_base {
 
   static_assert(is_ref_unique<refs...>::value, "keys for obj are not unique");
 
@@ -330,16 +360,6 @@ struct obj_impl: obj_t {
     static_assert(is_ref_contained<ref, refs...>::value, "ref not found");
     return std::get<index<ref>::value>(nodes);
   }
-
-  template<constexpr_string ref>
-  constexpr auto& get() {
-    return get<key_impl<ref>>().node.impl->value;
-  }
-
-  template<ctom::key_t T>
-  auto& operator[](T){
-    return *(get<T>().node.impl);
-  };
 
   struct for_node {
     template<typename F>
@@ -530,7 +550,7 @@ namespace ind {
 
 } // End of Namespace
 
-template<constexpr_string key>
+template<ctom::constexpr_string key>
 constexpr auto operator""_key(){
   return ctom::key_impl<key>{};
 }
