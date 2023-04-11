@@ -22,7 +22,7 @@ endif
 ifeq ($(UNAME), Darwin)
 TINYLINK += -framework OpenGL -DTINYENGINE_OS_MAC
 LF += -I/opt/homebrew/include -L/opt/homebrew/lib
-CC = g++-12 -std=c++17
+CC = g++-12 -std=c++20
 endif
 
 all: main.cpp
