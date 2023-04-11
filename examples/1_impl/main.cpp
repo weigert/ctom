@@ -59,16 +59,12 @@ int main( int argc, char* args[] ) {
 
 
 	Root_Impl root;
-	//root["bar"_key]["bar-foo"_key]["foo-int"_key] = 7;
-
-	//root.getm<"bar", "bar-foo">();
-
 	ctom::print(root);
 
 	Arr_Impl arr;
-	arr[ctom::ind_impl<0>{}] = 6;
-	arr[ctom::ind_impl<1>{}] = 3;
-	arr[ctom::ind_impl<2>{}] = 0;
+	arr.get<0>() = 6;
+	arr.get<1>() = 3;
+	arr.get<2>() = 0;
 	ctom::print(arr);
 
 	Bar_Impl bar;
