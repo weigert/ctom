@@ -11,92 +11,121 @@
 
     because we have the object model, we should be able to parse it directly.
     I should therefore have a yaml marshal and yaml unmarshal method.
+
+
+    I have:
+
+    (key, val)
+    (key, arr)
+    (key, obj)
+
+    note that keys are always contained by objects.
+
+    Then I have:
+
+    (ind, val)
+    (ind, arr)
+    (ind, obj)
+
+    and inds are always contained by arrays.
+
+    Then, for arrays, when every they point to something then
+    the beginning of the element should be on the same line as the index.
+
+    otherwise, indenting behavior is just as normal.
+
+
 */
 
 namespace ctom {
 namespace yaml {
 
-// Marshal
+// YAML Marshal
 
-template<ctom::key_t IK, val_t T>
-void marshal(ref_impl<IK, node_impl<T>>&, std::string prefix = "");
-template<ctom::key_t IK, arr_t T>
-void marshal(ref_impl<IK, node_impl<T>>&, std::string prefix = "");
-template<ctom::key_t IK, obj_t T>
-void marshal(ref_impl<IK, node_impl<T>>&, std::string prefix = "");
+// Forward Declaration
 
-template<ctom::ind_t IK, val_t T>
-void marshal(ref_impl<IK, node_impl<T>>&, std::string prefix = "");
-template<ctom::ind_t IK, arr_t T>
-void marshal(ref_impl<IK, node_impl<T>>&, std::string prefix = "");
-template<ctom::ind_t IK, obj_t T>
-void marshal(ref_impl<IK, node_impl<T>>&, std::string prefix = "");
+template<val_t T>
+void marshal(T&, std::string prefix = "");
+template<arr_t T>
+void marshal(T&, std::string prefix = "");
+template<obj_t T>
+void marshal(T&, std::string prefix = "");
 
-// Entry-Point
+// Implementation
 
-template<ctom::obj_t T>
-void marshal(T& obj, std::ostream& os = std::cout){
-    std::apply([&](auto&&... args){
-        (ctom::yaml::marshal(args), ...);
-    }, obj.nodes);
+template<val_t T>
+void marshal(T& val, std::string prefix){
+    std::cout<<val.value;
 }
 
-// Ref Marhshal
+template<arr_t T>
+void marshal(T& arr, std::string prefix){
 
-template<ctom::key_t IK, val_t T>
-void marshal(ref_impl<IK, node_impl<T>>& ref, std::string prefix){
-    std::cout<<prefix<<IK::val<<": ";
-    if(ref.node.impl != NULL)
-    std::cout<<ref.node.impl->value;
-    std::cout<<"\n";
+    int n = 0;
+    arr.for_refs([prefix, &n](auto&& ref){
+
+        if(ref.node.type == "arr"){
+            std::cout<<prefix;
+            std::cout<<"- ";
+            std::cout<<"\n";
+            if(ref.node.impl != NULL)
+                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
+        } 
+
+        if(ref.node.type == "obj"){
+            std::cout<<prefix;
+            std::cout<<"- ";
+            std::cout<<"\n";
+            if(ref.node.impl != NULL)
+                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
+        }
+
+        if(ref.node.type == "val"){
+            std::cout<<prefix;
+            std::cout<<"- ";
+            if(ref.node.impl != NULL)
+                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
+            std::cout<<"\n";
+        }
+
+        n++;
+    });
+
 }
 
-template<ctom::key_t IK, arr_t T>
-void marshal(ref_impl<IK, node_impl<T>>& ref, std::string prefix){
-    std::cout<<prefix<<IK::val<<":\n";
-    if(ref.node.impl != NULL)
-    std::apply([&](auto&&... args){
-        (ctom::yaml::marshal(args, prefix + "  "), ...);
-    }, ref.node.impl->nodes);
-}
+template<obj_t T>
+void marshal(T& obj, std::string prefix){
 
-template<ctom::key_t IK, obj_t T>
-void marshal(ref_impl<IK, node_impl<T>>& ref, std::string prefix){
-    std::cout<<prefix<<IK::val<<":\n";
-    if(ref.node.impl != NULL)
-    std::apply([&](auto&&... args){
-        (ctom::yaml::marshal(args, prefix + "  "), ...);
-    }, ref.node.impl->nodes);
-}
+    // Iterate over Object References
+  
+    obj.for_refs([prefix](auto&& ref){
 
-template<ctom::ind_t IK, val_t T>
-void marshal(ref_impl<IK, node_impl<T>>& ref, std::string prefix){
-    std::cout<<prefix<<"- ";
-    if(ref.node.impl != NULL)
-    std::cout<<ref.node.impl->value;
-    std::cout<<"\n";
-}
+        if(ref.node.type == "arr"){
+            std::cout<<prefix;
+            std::cout<<ref.key<<": ";
+            std::cout<<"\n";
+            if(ref.node.impl != NULL)
+                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
+        }
 
-template<ctom::ind_t IK, arr_t T>
-void marshal(ref_impl<IK, node_impl<T>>& ref, std::string prefix){
-    std::cout<<prefix<<"-\n";
-    if(ref.node.impl != NULL)
-    std::apply([&](auto&&... args){
-        (ctom::yaml::marshal(args, prefix + "  "), ...);
-    }, ref.node.impl->nodes);
-}
+        if(ref.node.type == "obj"){
+            std::cout<<prefix;
+            std::cout<<ref.key<<": ";
+            std::cout<<"\n";
+            if(ref.node.impl != NULL)
+                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
+        }
 
-template<ctom::ind_t IK, obj_t T>
-void marshal(ref_impl<IK, node_impl<T>>& ref, std::string prefix){
-    std::cout<<prefix<<"-\n";
-    if(ref.node.impl != NULL)
-    std::apply([&](auto&&... args){
-        int i = 0;
-        ([&](){
-       //     if(i++ == 0) ctom::yaml::marshal(args, prefix + "  ");
-            ctom::yaml::marshal(args, prefix + "  ");
-        }(), ...);
-    }, ref.node.impl->nodes);
+        if(ref.node.type == "val"){
+            std::cout<<prefix;
+            std::cout<<ref.key<<": ";
+            if(ref.node.impl != NULL)
+                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
+            std::cout<<"\n";
+        }
+
+    });
+
 }
 
 }   // end of namespace yaml

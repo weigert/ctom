@@ -25,6 +25,8 @@ template<typename T> concept obj_t = std::derived_from<T, ctom::obj_base>;
 
 template<typename T>
 struct node_impl: node_base {
+  static constexpr auto type = T::type;
+
   T* impl = NULL;
   ~node_impl(){
     if(impl != NULL) delete impl;
@@ -115,7 +117,8 @@ template<typename T> concept ind_key_t = ind_t<T> || key_t<T>;
 
 template<ind_key_t T, node_t N>
 struct ref_impl: ref_base {
-  static constexpr auto val = T::val;
+  static constexpr auto key = T::val;
+  static constexpr auto ind = T::val;
   N node;
 };
 
@@ -240,13 +243,6 @@ struct is_ref_unique<R, Rs...>{
   static constexpr bool value = !is_ref_contained<R, Rs...>::value && is_ref_unique<Rs...>::value;
 };
 
-//
-
-template <typename... Ts, typename F>
-constexpr void for_types(F&& f){
-    (f.template operator()<Ts>(), ...);
-}
-
 /*
 ================================================================================
                           Node Member Implementations
@@ -278,24 +274,24 @@ struct val_impl: val_base {
 
 // Array
 
-template<ind_ref_t... inds>
+template<ind_ref_t... refs>
 struct arr_impl: arr_base {
 
-  static_assert(is_ref_unique<inds...>::value, "indices for arr are not unique");
+  static_assert(is_ref_unique<refs...>::value, "indices for arr are not unique");
 
-  std::tuple<inds...> nodes;
-  static constexpr size_t size = std::tuple_size<std::tuple<inds...>>::value;
+  std::tuple<refs...> nodes;
+  static constexpr size_t size = std::tuple_size<std::tuple<refs...>>::value;
 
-  template<ind_ref_t... sinds>
-  using ext = obj_impl<inds..., sinds...>;
+  template<ind_ref_t... srefs>
+  using ext = obj_impl<refs..., srefs...>;
 
   template<ctom::ind_t ind> struct index {
-    static constexpr size_t value = ctom::index_refs<0, ind, inds...>::value;
+    static constexpr size_t value = ctom::index_refs<0, ind, refs...>::value;
   };
 
   template<ctom::ind_t ind>
   constexpr auto& get() {
-    static_assert(is_ref_contained<ind, inds...>::value, "index is out of bounds");
+    static_assert(is_ref_contained<ind, refs...>::value, "index is out of bounds");
     return std::get<index<ind>::value>(nodes);
   }
 
@@ -304,14 +300,23 @@ struct arr_impl: arr_base {
     return *get<ind_impl<ind>>().node.impl;
   }
 
-  struct for_node {
+  // Static and Non-Static Iteration
+
+  struct for_type {
     template<typename F>
     static constexpr void iter(F&& f){
-      for_types<inds...>(f);
+      (f.template operator()<refs>(), ...);
     }
   };
 
-  //
+  template<typename F>
+  void for_refs(F&& f){
+    std::apply([&](auto&&... ref){
+      (f.template operator()(ref), ...);
+    }, nodes);
+  }
+
+  // Instance Assignment
 
   template<size_t ind, typename T>
   auto& val(const T& t){
@@ -374,12 +379,21 @@ struct obj_impl: obj_base {
     return *get<key_impl<s>>().node.impl;
   }
 
-  struct for_node {
+  // Static and Non-Static Iteration
+
+  struct for_type {
     template<typename F>
     static constexpr void iter(F&& f){
-      for_types<refs...>(f);
+      (f.template operator()<refs>(), ...);
     }
   };
+
+  template<typename F>
+  void for_refs(F&& f){
+    std::apply([&](auto&&... ref){
+      (f.template operator()(ref), ...);
+    }, nodes);
+  }
 
   // Instance Value Assignment
 
@@ -440,7 +454,7 @@ struct printer<ref_impl<IK, node_impl<T>>>{
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<T::type<<": ";
     std::cout<<IK::val<<"\n";
-    T::for_node::iter([shift]<typename N>(){
+    T::for_type::iter([shift]<typename N>(){
       printer<N>::print(shift+1);
     });
   }
@@ -452,7 +466,7 @@ struct printer<ref_impl<IK, node_impl<T>>>{
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<T::type<<": ";
     std::cout<<IK::val<<"\n";
-    T::for_node::iter([shift]<typename N>(){
+    T::for_type::iter([shift]<typename N>(){
       printer<N>::print(shift+1);
     });
   }
@@ -463,7 +477,7 @@ struct printer<ref_impl<IK, node_impl<T>>>{
 template<obj_t T>
 struct printer<T>{
   static void print(size_t shift = 0){
-    T::for_node::iter([shift]<typename N>(){
+    T::for_type::iter([shift]<typename N>(){
       printer<N>::print(shift);
     });
   }
@@ -478,63 +492,92 @@ void print(){
 
 // Instance-Based Marshalling
 
-// Reference
-
-template<ctom::ind_key_t IK, val_t T>
-void print(ref_impl<IK, node_impl<T>>& ref, size_t shift = 0);
-template<ctom::ind_key_t IK, arr_t T>
-void print(ref_impl<IK, node_impl<T>>& ref, size_t shift = 0);
-template<ctom::ind_key_t IK, obj_t T>
-void print(ref_impl<IK, node_impl<T>>& ref, size_t shift = 0);
-
-template<ctom::ind_key_t IK, val_t T>
-void print(ref_impl<IK, node_impl<T>>& ref, size_t shift){
-  for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<T::type<<": ";
-  std::cout<<IK::val<<" = ";
-  if(ref.node.impl != NULL)
-  std::cout<<ref.node.impl->value;
-  std::cout<<"\n";
-}
-
-template<ctom::ind_key_t IK, arr_t T>
-void print(ref_impl<IK, node_impl<T>>& ref, size_t shift){
-  for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<T::type<<": ";
-  std::cout<<IK::val<<" = ["<<"\n";
-  if(ref.node.impl != NULL)
-  std::apply([&](auto&&... args){
-    (ctom::print(args, shift+1), ...);
-  }, ref.node.impl->nodes);
-  for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<"]"<<std::endl;
-}
-
-template<ctom::ind_key_t IK, obj_t T>
-void print(ref_impl<IK, node_impl<T>>& ref, size_t shift){
-  for(size_t s = 0; s < shift; s++) std::cout<<"  ";
-  std::cout<<T::type<<": ";
-  std::cout<<IK::val<<"\n";
-  if(ref.node.impl != NULL)
-  std::apply([&](auto&&... args){
-    (ctom::print(args, shift+1), ...);
-  }, ref.node.impl->nodes);
-}
-
-// Entry-Point
-
+template<val_t T>
+void print(T&, size_t shift = 0);
+template<arr_t T>
+void print(T&, size_t shift = 0);
 template<obj_t T>
-void print(T& obj){
-  std::apply([](auto&&... args){
-    (ctom::print(args), ...);
-  }, obj.nodes);
+void print(T&, size_t shift = 0);
+
+template<val_t T>
+void print(T& val, size_t shift){
+  std::cout<<val.value;
 }
 
 template<arr_t T>
-void print(T& arr){
-  std::apply([](auto&&... args){
-    (ctom::print(args), ...);
-  }, arr.nodes);
+void print(T& arr, size_t shift){
+
+  arr.for_refs([shift](auto&& ref){
+
+    for(size_t i = 0; i < shift; i++)
+      std::cout<<"  ";
+
+    std::cout<<ref.node.type<<": ";
+    std::cout<<ref.ind<<" = ";
+
+    // Check Node Types!
+
+    if(ref.node.type == "arr"){
+      std::cout<<"[\n";
+      if(ref.node.impl != NULL)
+      ctom::print(*ref.node.impl, shift+1);
+      for(size_t i = 0; i < shift; i++)
+        std::cout<<"  ";
+      std::cout<<"]\n";
+    } 
+
+    if(ref.node.type == "obj"){
+      std::cout<<"\n";
+      if(ref.node.impl != NULL)
+      ctom::print(*ref.node.impl, shift+1);
+    }
+
+    if(ref.node.type == "val"){
+      if(ref.node.impl != NULL)
+      ctom::print(*ref.node.impl, shift+1);
+      std::cout<<"\n";
+    }
+
+  });
+
+}
+
+template<obj_t T>
+void print(T& obj, size_t shift){
+
+  // Iterate over Object References
+  
+  obj.for_refs([shift](auto&& ref){
+
+    for(size_t i = 0; i < shift; i++)
+      std::cout<<"  ";
+
+    std::cout<<ref.node.type<<": ";
+    std::cout<<ref.key<<" = ";
+  
+    if(ref.node.type == "arr"){
+      std::cout<<"[\n";
+      if(ref.node.impl != NULL)
+      ctom::print(*ref.node.impl, shift+1);
+      for(size_t i = 0; i < shift; i++)
+        std::cout<<"  ";
+      std::cout<<"]\n";
+    } 
+
+    if(ref.node.type == "obj"){
+      std::cout<<"\n";
+      if(ref.node.impl != NULL)
+      ctom::print(*ref.node.impl, shift+1);
+    }
+
+    if(ref.node.type == "val"){
+      if(ref.node.impl != NULL)
+      ctom::print(*ref.node.impl, shift+1);
+      std::cout<<"\n";
+    }
+
+  });
+
 }
 
 /*
@@ -543,7 +586,7 @@ void print(T& arr){
 ================================================================================
 */
 
-template<ind_ref_t... inds> using arr = arr_impl<inds...>;
+template<ind_ref_t... refs> using arr = arr_impl<refs...>;
 template<key_ref_t... keys> using obj = obj_impl<keys...>;
 
 namespace key {
