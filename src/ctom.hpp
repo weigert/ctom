@@ -4,6 +4,7 @@
 #include <iostream>
 #include <type_traits>
 #include <tuple>
+#include <string>
 
 namespace ctom {
 
@@ -493,49 +494,49 @@ void print(){
 // Instance-Based Marshalling
 
 template<val_t T>
-void print(T&, size_t shift = 0);
+void print(T&, std::string prefix = "");
 template<arr_t T>
-void print(T&, size_t shift = 0);
+void print(T&, std::string prefix = "");
 template<obj_t T>
-void print(T&, size_t shift = 0);
+void print(T&, std::string prefix = "");
 
 template<val_t T>
-void print(T& val, size_t shift){
+void print(T& val, std::string prefix){
   std::cout<<val.value;
 }
 
 template<arr_t T>
-void print(T& arr, size_t shift){
+void print(T& arr, std::string prefix){
 
-  arr.for_refs([shift](auto&& ref){
+  arr.for_refs([prefix](auto&& ref){
 
-    for(size_t i = 0; i < shift; i++)
-      std::cout<<"  ";
-
-    std::cout<<ref.node.type<<": ";
-    std::cout<<ref.ind<<" = ";
-
-    // Check Node Types!
+    if(ref.node.type == "val"){
+      std::cout<<prefix;
+      std::cout<<ref.node.type<<": ";
+      std::cout<<ref.ind<<" = ";
+      if(ref.node.impl != NULL)
+        ctom::print(*ref.node.impl, prefix+"  ");
+      std::cout<<"\n";
+    }
 
     if(ref.node.type == "arr"){
+      std::cout<<prefix;
+      std::cout<<ref.node.type<<": ";
+      std::cout<<ref.ind<<" = ";
       std::cout<<"[\n";
       if(ref.node.impl != NULL)
-      ctom::print(*ref.node.impl, shift+1);
-      for(size_t i = 0; i < shift; i++)
-        std::cout<<"  ";
+        ctom::print(*ref.node.impl, prefix+"  ");
+      std::cout<<prefix;
       std::cout<<"]\n";
     } 
 
     if(ref.node.type == "obj"){
+      std::cout<<prefix;
+      std::cout<<ref.node.type<<": ";
+      std::cout<<ref.ind<<" = ";
       std::cout<<"\n";
       if(ref.node.impl != NULL)
-      ctom::print(*ref.node.impl, shift+1);
-    }
-
-    if(ref.node.type == "val"){
-      if(ref.node.impl != NULL)
-      ctom::print(*ref.node.impl, shift+1);
-      std::cout<<"\n";
+        ctom::print(*ref.node.impl, prefix+"  ");
     }
 
   });
@@ -543,37 +544,39 @@ void print(T& arr, size_t shift){
 }
 
 template<obj_t T>
-void print(T& obj, size_t shift){
+void print(T& obj, std::string prefix){
 
   // Iterate over Object References
   
-  obj.for_refs([shift](auto&& ref){
-
-    for(size_t i = 0; i < shift; i++)
-      std::cout<<"  ";
-
-    std::cout<<ref.node.type<<": ";
-    std::cout<<ref.key<<" = ";
+  obj.for_refs([prefix](auto&& ref){
+  
+    if(ref.node.type == "val"){
+      std::cout<<prefix;
+      std::cout<<ref.node.type<<": ";
+      std::cout<<ref.key<<" = ";
+      if(ref.node.impl != NULL)
+        ctom::print(*ref.node.impl, prefix+"  ");
+      std::cout<<"\n";
+    }
   
     if(ref.node.type == "arr"){
+      std::cout<<prefix;
+      std::cout<<ref.node.type<<": ";
+      std::cout<<ref.key<<" = ";
       std::cout<<"[\n";
       if(ref.node.impl != NULL)
-      ctom::print(*ref.node.impl, shift+1);
-      for(size_t i = 0; i < shift; i++)
-        std::cout<<"  ";
+        ctom::print(*ref.node.impl, prefix+"  ");
+      std::cout<<prefix;
       std::cout<<"]\n";
     } 
 
     if(ref.node.type == "obj"){
+      std::cout<<prefix;
+      std::cout<<ref.node.type<<": ";
+      std::cout<<ref.key<<" = ";
       std::cout<<"\n";
       if(ref.node.impl != NULL)
-      ctom::print(*ref.node.impl, shift+1);
-    }
-
-    if(ref.node.type == "val"){
-      if(ref.node.impl != NULL)
-      ctom::print(*ref.node.impl, shift+1);
-      std::cout<<"\n";
+        ctom::print(*ref.node.impl, prefix+"  ");
     }
 
   });
