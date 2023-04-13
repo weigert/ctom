@@ -83,6 +83,8 @@ ostream operator<<(ostream const& os, T& t){
     return os << set{{}, NULL, &t};
 }
 
+// Marshal Implementation
+
 template<val_t T>
 ostream operator<<(ostream const& os, set<T> s){
     os<<s.ind;
@@ -90,20 +92,17 @@ ostream operator<<(ostream const& os, set<T> s){
         os<<s.key<<": ";
     }
     if(s.t != NULL) os<<s.t->value;
-    os<<"\n";
-    return os;
+    return os << "\n";
 }
-
-// Marshal Implementation
 
 template<arr_t T>
 ostream operator<<(ostream const& os, set<T> s){
 
     if(s.key != NULL){
         os<<s.ind<<s.key<<":\n";
-        s.ind = s.ind + TAB;
         for(auto& st: s.ind.state)
             st = TAB;
+        s.ind = s.ind + TAB;
     }
 
     s.t->for_refs([&](auto&& ref){
