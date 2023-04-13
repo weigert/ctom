@@ -1,4 +1,5 @@
 #include "../../src/ctom.hpp"
+#include "../../src/yaml.hpp"
 #include <vector>
 #include <set>
 
@@ -57,6 +58,8 @@ int main( int argc, char* args[] ) {
 	arr.get<1>().get<1>().get<"foo-int">() = 1;
 	arr.get<1>().get<2>().get<"foo-int">() = 2;
 	ctom::print(arr);
+
+	ctom::yaml::marshal(arr);
 
 	return 0;
 

@@ -61,7 +61,7 @@ int main( int argc, char* args[] ) {
 	};
 
 	struct Root_Impl: Root {
-		BarArr_Impl& bar = Root::obj<"bar", BarArr_Impl>();
+		BarArr_Impl& bar = Root::arr<"bar", BarArr_Impl>();
 	};
 
 	// Single Instantiation

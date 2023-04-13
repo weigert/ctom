@@ -4,92 +4,108 @@
 #include "ctom.hpp"
 #include <string>
 #include <iostream>
+#include <vector>
 
 namespace ctom {
 namespace yaml {
+
+/*
+
+we probably need to pack out bigger guns.
+as in, use data-types to allow for merging
+of specific indenting specifiers.
+
+this should also let us later match them...
+well see.
+
+*/
+
+enum indentstate {
+    TAB,
+    DASH
+};
+
+struct indent {
+    std::vector<indentstate> state;
+    indent(){}
+    indent(std::initializer_list<indentstate> s){
+        state = s;
+    }
+};
+
+indent operator+(indent ind, indentstate state){
+    ind.state.push_back(state);
+    return ind;
+}
+
+std::ostream& operator<<(std::ostream& os, indent& i){
+    for(auto& s: i.state){
+        if(s == TAB) os << "  ";
+        if(s == DASH) os << "- ";
+    }
+    return os;
+}
 
 // YAML Marshal
 
 // Forward Declaration
 
 template<val_t T>
-void marshal(T&, std::string prefix = "");
+void marshal(indent = {}, const char* key = "", T* = NULL);
 template<arr_t T>
-void marshal(T&, std::string prefix = "");
+void marshal(indent = {}, const char* key = "", T* = NULL);
 template<obj_t T>
-void marshal(T&, std::string prefix = "");
+void marshal(indent = {}, const char* key = "", T* = NULL);
+
+template<typename T>
+void marshal(T& t){
+    marshal<T>({}, NULL, &t);
+}
 
 // Implementation
 
 template<val_t T>
-void marshal(T& val, std::string prefix){
-    std::cout<<val.value;
+void marshal(indent ind, const char* key, T* val){
+    std::cout<<ind;
+    if(key != NULL){
+        std::cout<<key<<": ";
+    }
+    if(val != NULL) std::cout<<val->value;
+    std::cout<<"\n";
 }
 
 template<arr_t T>
-void marshal(T& arr, std::string prefix){
+void marshal(indent ind, const char* key, T* arr){
 
-    arr.for_refs([prefix](auto&& ref){
+    if(key != NULL){
+        std::cout<<ind<<key<<":\n";
+        ind = ind + TAB;
+        for(auto& s: ind.state)
+            s = TAB;
+    }
 
-        if(ref.node.type == "val"){
-            std::cout<<prefix;
-            std::cout<<"- ";
-            if(ref.node.impl != NULL)
-                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
-            std::cout<<"\n";
-        }
-
-        if(ref.node.type == "arr"){
-            std::cout<<prefix;
-            std::cout<<"- ";
-            std::cout<<"\n";
-            if(ref.node.impl != NULL)
-                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
-        } 
-
-        if(ref.node.type == "obj"){
-            std::cout<<prefix;
-            std::cout<<"- ";
-            std::cout<<"\n";
-            if(ref.node.impl != NULL)
-                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
-        }
-
+    arr->for_refs([&](auto&& ref){
+        ctom::yaml::marshal(ind + DASH, NULL, ref.node.impl);
+        for(auto& s: ind.state)
+            s = TAB;
     });
 
 }
 
 template<obj_t T>
-void marshal(T& obj, std::string prefix){
+void marshal(indent ind, const char* key, T* obj){
 
-    // Iterate over Object References
-  
-    obj.for_refs([prefix](auto&& ref){
+    if(key != NULL){
+        std::cout<<ind<<key<<":\n";
+        for(auto& s: ind.state)
+            s = TAB;
+        ind = ind + TAB;
+    }
 
-        if(ref.node.type == "val"){
-            std::cout<<prefix;
-            std::cout<<ref.key<<": ";
-            if(ref.node.impl != NULL)
-                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
-            std::cout<<"\n";
-        }
-
-        if(ref.node.type == "arr"){
-            std::cout<<prefix;
-            std::cout<<ref.key<<": ";
-            std::cout<<"\n";
-            if(ref.node.impl != NULL)
-                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
-        }
-
-        if(ref.node.type == "obj"){
-            std::cout<<prefix;
-            std::cout<<ref.key<<": ";
-            std::cout<<"\n";
-            if(ref.node.impl != NULL)
-                ctom::yaml::marshal(*ref.node.impl, prefix+"  ");
-        }
-
+    obj->for_refs([&](auto&& ref){
+        ctom::yaml::marshal(ind, ref.key, ref.node.impl);
+        for(auto& s: ind.state)
+            s = TAB;
     });
 
 }
