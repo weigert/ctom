@@ -67,7 +67,7 @@ int main( int argc, char* args[] ) {
 	// Single Instantiation
 
 	Root_Impl root;
-	ctom::yaml::marshal(root);
+	std::cout<<ctom::yaml::emit<<root;//<<root;
 
 	return 0;
 

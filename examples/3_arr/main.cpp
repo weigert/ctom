@@ -59,7 +59,7 @@ int main( int argc, char* args[] ) {
 	arr.get<1>().get<2>().get<"foo-int">() = 2;
 	ctom::print(arr);
 
-	ctom::yaml::marshal(arr);
+	std::cout<<ctom::yaml::emit<<arr;
 
 	return 0;
 

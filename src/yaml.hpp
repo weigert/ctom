@@ -9,16 +9,27 @@
 namespace ctom {
 namespace yaml {
 
-/*
+// Stream-Forwarding Operator
 
-we probably need to pack out bigger guns.
-as in, use data-types to allow for merging
-of specific indenting specifiers.
+struct ostream {
+    ostream(std::ostream& os):os(os){}
+    std::ostream& os;
+};
 
-this should also let us later match them...
-well see.
+template<typename T>
+ostream operator<<(ostream const& q, T& t) {
+    q.os << t;
+    return q;
+}
 
-*/
+// Operator Instance
+
+struct ostream_t{} emit;
+ostream operator<<(std::ostream& os, ostream_t&) {
+    return ostream(os);
+}
+
+// Indentation State
 
 enum indentstate {
     TAB,
@@ -38,7 +49,7 @@ indent operator+(indent ind, indentstate state){
     return ind;
 }
 
-std::ostream& operator<<(std::ostream& os, indent& i){
+ostream operator<<(ostream const& os, indent& i) {
     for(auto& s: i.state){
         if(s == TAB) os << "  ";
         if(s == DASH) os << "- ";
@@ -46,67 +57,81 @@ std::ostream& operator<<(std::ostream& os, indent& i){
     return os;
 }
 
-// YAML Marshal
-
-// Forward Declaration
-
-template<val_t T>
-void marshal(indent = {}, const char* key = "", T* = NULL);
-template<arr_t T>
-void marshal(indent = {}, const char* key = "", T* = NULL);
-template<obj_t T>
-void marshal(indent = {}, const char* key = "", T* = NULL);
+// Reference State
 
 template<typename T>
-void marshal(T& t){
-    marshal<T>({}, NULL, &t);
-}
+struct set {
+    indent ind;
+    const char* key;
+    T* t;
+};
 
-// Implementation
+// Node-Type Entrypoints
 
 template<val_t T>
-void marshal(indent ind, const char* key, T* val){
-    std::cout<<ind;
-    if(key != NULL){
-        std::cout<<key<<": ";
-    }
-    if(val != NULL) std::cout<<val->value;
-    std::cout<<"\n";
+ostream operator<<(ostream const& os, T& t){
+    return os << set{{}, NULL, &t};
 }
 
 template<arr_t T>
-void marshal(indent ind, const char* key, T* arr){
-
-    if(key != NULL){
-        std::cout<<ind<<key<<":\n";
-        ind = ind + TAB;
-        for(auto& s: ind.state)
-            s = TAB;
-    }
-
-    arr->for_refs([&](auto&& ref){
-        ctom::yaml::marshal(ind + DASH, NULL, ref.node.impl);
-        for(auto& s: ind.state)
-            s = TAB;
-    });
-
+ostream operator<<(ostream const& os, T& t){
+    return os << set{{}, NULL, &t};
 }
 
 template<obj_t T>
-void marshal(indent ind, const char* key, T* obj){
+ostream operator<<(ostream const& os, T& t){
+    return os << set{{}, NULL, &t};
+}
 
-    if(key != NULL){
-        std::cout<<ind<<key<<":\n";
-        for(auto& s: ind.state)
-            s = TAB;
-        ind = ind + TAB;
+template<val_t T>
+ostream operator<<(ostream const& os, set<T> s){
+    os<<s.ind;
+    if(s.key != NULL){
+        os<<s.key<<": ";
+    }
+    if(s.t != NULL) os<<s.t->value;
+    os<<"\n";
+    return os;
+}
+
+// Marshal Implementation
+
+template<arr_t T>
+ostream operator<<(ostream const& os, set<T> s){
+
+    if(s.key != NULL){
+        os<<s.ind<<s.key<<":\n";
+        s.ind = s.ind + TAB;
+        for(auto& st: s.ind.state)
+            st = TAB;
     }
 
-    obj->for_refs([&](auto&& ref){
-        ctom::yaml::marshal(ind, ref.key, ref.node.impl);
-        for(auto& s: ind.state)
-            s = TAB;
+    s.t->for_refs([&](auto&& ref){
+        os << set{s.ind + DASH, NULL, ref.node.impl};
+        for(auto& st: s.ind.state)
+            st = TAB;
     });
+
+    return os;
+}
+
+template<obj_t T>
+ostream operator<<(ostream const& os, set<T> s){
+
+    if(s.key != NULL){
+        os<<s.ind<<s.key<<":\n";
+        for(auto& st: s.ind.state)
+            st = TAB;
+        s.ind = s.ind + TAB;
+    }
+
+    s.t->for_refs([&](auto&& ref){
+        os << set{s.ind, ref.key, ref.node.impl};
+        for(auto& st: s.ind.state)
+            st = TAB;
+    });
+
+    return os;
 
 }
 
