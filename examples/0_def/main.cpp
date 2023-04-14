@@ -2,7 +2,7 @@
 
 int main( int argc, char* args[] ) {
 
-	// Simple Object
+	// Simple Object Declaration
 
 	struct Foo: ctom::obj<
 		ctom::key::val<"foo-int", int>,
@@ -12,7 +12,7 @@ int main( int argc, char* args[] ) {
 
 	ctom::print<Foo>(); // NOTE: FULLY STATIC! NO INSTANCE!
 
-	// Simple Array
+	// Simple Array Declaration
 
 	struct Barr: ctom::arr<
 		ctom::ind::val<0, int>,
@@ -57,7 +57,7 @@ int main( int argc, char* args[] ) {
 
 	ctom::print<MarrArr>();
 
-	// Extended Objects
+	// Extended Object Declaration
 
 	struct FooExt: Foo::ext<
 		ctom::key::val<"foo-ext-int", int>,
@@ -66,7 +66,7 @@ int main( int argc, char* args[] ) {
 
 	ctom::print<FooExt>();
 
-	// Extended Arrays
+	// Extended Array Declaration
 
 	struct MarrExt: Marr::ext<
 		ctom::ind::obj<3, Maz>,
