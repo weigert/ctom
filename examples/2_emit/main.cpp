@@ -1,5 +1,6 @@
 #include "../../src/ctom.hpp"
 #include "../../src/yaml.hpp"
+#include "../../src/json.hpp"
 
 int main( int argc, char* args[] ) {
 
@@ -67,7 +68,8 @@ int main( int argc, char* args[] ) {
 	// Single Instantiation
 
 	Root_Impl root;
-	std::cout<<ctom::yaml::emit<<root;//<<root;
+	std::cout<<ctom::yaml::emit<<root;
+	std::cout<<ctom::json::emit<<root;
 
 	return 0;
 
