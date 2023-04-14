@@ -408,7 +408,19 @@ std::cout << ctom::yaml::emit << foo_impl;
 
 #### json
 
-**WIP**
+```c++
+std::cout << ctom::json::emit << foo_impl;
+```
+
+```json
+{
+  "foo-int": "1",
+  "foo-float": "0.5",
+  "foo-double": ""
+}
+```
+
+`ctom::json::parse`: **WIP**
 
 ## Details
 
