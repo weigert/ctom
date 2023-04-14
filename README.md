@@ -4,7 +4,7 @@ c++20 compile-time object model
 
 fully static strict typing for compile-time serialization
 
-stop iterating over parse-trees - statically emit from and parse into c++ variables, arrays ans structs directly
+stop iterating over parse-trees - statically emit from and parse into c++ variables, arrays and structs directly
 
 `Note: This is similar to a strict-typed, compile-time boost property tree.`
 
