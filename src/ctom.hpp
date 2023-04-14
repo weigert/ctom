@@ -284,7 +284,7 @@ struct arr_impl: arr_base {
   static constexpr size_t size = std::tuple_size<std::tuple<refs...>>::value;
 
   template<ind_ref_t... srefs>
-  using ext = obj_impl<refs..., srefs...>;
+  using ext = arr_impl<refs..., srefs...>;
 
   template<ctom::ind_t ind> struct index {
     static constexpr size_t value = ctom::index_refs<0, ind, refs...>::value;
@@ -445,7 +445,7 @@ struct printer<ref_impl<IK, node_impl<T>>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<T::type<<": ";
-    std::cout<<IK::val<<"\n";
+    std::cout<<"["<<IK::val<<"]\n";
   }
 };
 
@@ -454,7 +454,7 @@ struct printer<ref_impl<IK, node_impl<T>>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<T::type<<": ";
-    std::cout<<IK::val<<"\n";
+    std::cout<<"["<<IK::val<<"]\n";
     T::for_type::iter([shift]<typename N>(){
       printer<N>::print(shift+1);
     });
@@ -466,7 +466,7 @@ struct printer<ref_impl<IK, node_impl<T>>>{
   static void print(size_t shift = 0){
     for(size_t s = 0; s < shift; s++) std::cout<<"  ";
     std::cout<<T::type<<": ";
-    std::cout<<IK::val<<"\n";
+    std::cout<<"["<<IK::val<<"]\n";
     T::for_type::iter([shift]<typename N>(){
       printer<N>::print(shift+1);
     });
@@ -476,6 +476,15 @@ struct printer<ref_impl<IK, node_impl<T>>>{
 // Print an Object-Type Directly
 
 template<obj_t T>
+struct printer<T>{
+  static void print(size_t shift = 0){
+    T::for_type::iter([shift]<typename N>(){
+      printer<N>::print(shift);
+    });
+  }
+};
+
+template<arr_t T>
 struct printer<T>{
   static void print(size_t shift = 0){
     T::for_type::iter([shift]<typename N>(){
@@ -513,7 +522,7 @@ void print(T& arr, std::string prefix){
     if(ref.node.type == "val"){
       std::cout<<prefix;
       std::cout<<ref.node.type<<": ";
-      std::cout<<ref.ind<<" = ";
+      std::cout<<"["<<ref.ind<<"] = ";
       if(ref.node.impl != NULL)
         ctom::print(*ref.node.impl, prefix+"  ");
       std::cout<<"\n";
@@ -522,7 +531,7 @@ void print(T& arr, std::string prefix){
     if(ref.node.type == "arr"){
       std::cout<<prefix;
       std::cout<<ref.node.type<<": ";
-      std::cout<<ref.ind<<" = ";
+      std::cout<<"["<<ref.ind<<"] = ";
       std::cout<<"[\n";
       if(ref.node.impl != NULL)
         ctom::print(*ref.node.impl, prefix+"  ");
@@ -533,7 +542,7 @@ void print(T& arr, std::string prefix){
     if(ref.node.type == "obj"){
       std::cout<<prefix;
       std::cout<<ref.node.type<<": ";
-      std::cout<<ref.ind<<" = ";
+      std::cout<<"["<<ref.ind<<"] = ";
       std::cout<<"\n";
       if(ref.node.impl != NULL)
         ctom::print(*ref.node.impl, prefix+"  ");
@@ -553,7 +562,7 @@ void print(T& obj, std::string prefix){
     if(ref.node.type == "val"){
       std::cout<<prefix;
       std::cout<<ref.node.type<<": ";
-      std::cout<<ref.key<<" = ";
+      std::cout<<"\""<<ref.key<<"\" = ";
       if(ref.node.impl != NULL)
         ctom::print(*ref.node.impl, prefix+"  ");
       std::cout<<"\n";
@@ -562,7 +571,7 @@ void print(T& obj, std::string prefix){
     if(ref.node.type == "arr"){
       std::cout<<prefix;
       std::cout<<ref.node.type<<": ";
-      std::cout<<ref.key<<" = ";
+      std::cout<<"\""<<ref.key<<"\" = ";
       std::cout<<"[\n";
       if(ref.node.impl != NULL)
         ctom::print(*ref.node.impl, prefix+"  ");
@@ -573,7 +582,7 @@ void print(T& obj, std::string prefix){
     if(ref.node.type == "obj"){
       std::cout<<prefix;
       std::cout<<ref.node.type<<": ";
-      std::cout<<ref.key<<" = ";
+      std::cout<<"\""<<ref.key<<"\" = ";
       std::cout<<"\n";
       if(ref.node.impl != NULL)
         ctom::print(*ref.node.impl, prefix+"  ");
@@ -608,10 +617,5 @@ namespace ind {
 //template<constexpr_string S> using key = key_impl<S>;
 
 } // End of Namespace
-
-template<ctom::constexpr_string key>
-constexpr auto operator""_key(){
-  return ctom::key_impl<key>{};
-}
 
 #endif
