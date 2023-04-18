@@ -392,6 +392,8 @@ arr: [1] = [
 
 Different serialization formats have stream-modifiers, which allow you to pass an object-model instance directly to the stream.
 
+Note that parsing of serialized data is simplified in this library, because of the declarative object-model. Instead of infering structure from the data, structure is known and the data is expected to match.
+
 #### yaml
 
 ```c++

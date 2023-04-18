@@ -5,9 +5,12 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <string_view>
 
 namespace ctom {
 namespace yaml {
+
+// Marshal
 
 // Stream-Forwarding Operator
 
@@ -16,8 +19,9 @@ struct ostream {
     std::ostream& os;
 };
 
+
 template<typename T>
-ostream operator<<(ostream const& q, T& t) {
+ostream operator<<(ostream const& q, const T& t) {
     q.os << t;
     return q;
 }
@@ -42,6 +46,15 @@ struct indent {
     indent(std::initializer_list<indentstate> s){
         state = s;
     }
+
+    std::string to_string(){
+        std::string str = "";
+        for(auto& s: state){
+            if(s == TAB) str = str+"  ";
+            if(s == DASH) str = str+"- ";
+        }
+        return str;
+    }
 };
 
 indent operator+(indent ind, indentstate state){
@@ -50,11 +63,7 @@ indent operator+(indent ind, indentstate state){
 }
 
 ostream operator<<(ostream const& os, indent& i) {
-    for(auto& s: i.state){
-        if(s == TAB) os << "  ";
-        if(s == DASH) os << "- ";
-    }
-    return os;
+    return os << i.to_string();
 }
 
 // Reference State
@@ -131,6 +140,133 @@ ostream operator<<(ostream const& os, set<T> s){
     });
 
     return os;
+
+}
+
+// Unmarshal
+
+// Stream-Forwarding Operator
+
+template<typename T>
+struct pstream {
+    pstream(T& t):t(t){}
+    T& t;
+};
+
+// Operator Instance
+
+struct pstream_t{} parse;
+
+template<typename T>
+pstream<T> operator<<(T& t, pstream_t&) {
+    return pstream<T>(t);
+}
+
+// Node-Type Entrypoints
+
+struct pset {
+    indent ind;
+    const char* key;
+    std::string_view& t;
+};
+
+template<val_t T>
+void operator<<(pstream<T> const& ps, std::string_view t){
+    ps << pset{{}, NULL, t};
+}
+
+template<arr_t T>
+void operator<<(pstream<T> const& ps, std::string_view t){
+    ps << pset{{}, NULL, t};
+}
+
+template<obj_t T>
+void operator<<(pstream<T> const& ps, std::string_view t){
+    ps << pset{{}, NULL, t};
+}
+
+// Base Trim Operations
+
+void trim_prefix(std::string_view& sv, std::string_view pre){
+    if(!sv.starts_with(pre)) throw "failed to trim prefix";
+    sv.remove_prefix(pre.size());
+}
+
+void trim_delim(std::string_view& sv, std::string_view delim){
+    if(sv.starts_with(delim) ^ sv.ends_with(delim))
+        throw "failed to trim delimiter";
+    if(sv.starts_with(delim) && sv.ends_with(delim)){
+        sv.remove_prefix(delim.size());
+        sv.remove_suffix(delim.size());
+    }
+}
+
+std::string_view find_delim(std::string_view& sv, std::string_view delim){
+    return sv.substr(0, sv.find(delim)+1);
+}
+
+template<val_t T>
+void operator<<(pstream<T> const& ps, pset s){
+
+    // Find the Delimiter
+
+    trim_prefix(s.t, s.ind.to_string());
+
+    auto line = find_delim(s.t, "\n");
+    std::cout<<line;
+
+    trim_prefix(s.t, line);
+
+}
+
+template<arr_t T>
+void operator<<(pstream<T> const& ps, pset s){
+
+    if(s.key != NULL){
+
+        trim_prefix(s.t, s.ind.to_string());
+
+        auto line = find_delim(s.t, "\n");
+        std::cout<<line;
+        
+        trim_prefix(s.t, line);
+
+        for(auto& st: s.ind.state)
+            st = TAB;
+        s.ind = s.ind + TAB;
+
+    }
+
+    ps.t.for_refs([&](auto&& ref){
+        *ref.node.impl << parse << pset{s.ind + DASH, NULL, s.t};
+        for(auto& st: s.ind.state)
+            st = TAB;
+    });
+
+}
+
+template<obj_t T>
+void operator<<(pstream<T> const& ps, pset s){
+
+    if(s.key != NULL){
+
+        trim_prefix(s.t, s.ind.to_string());
+
+        auto line = find_delim(s.t, "\n");        
+        std::cout<<line;
+
+        trim_prefix(s.t, line);
+
+        for(auto& st: s.ind.state)
+            st = TAB;
+        s.ind = s.ind + TAB;
+    }
+
+    ps.t.for_refs([&](auto&& ref){
+        *ref.node.impl << parse << pset{s.ind, ref.key, s.t};
+         for(auto& st: s.ind.state)
+            st = TAB;
+    });
 
 }
 
