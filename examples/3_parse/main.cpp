@@ -71,11 +71,11 @@ int main( int argc, char* args[] ) {
 	//std::cout<<ctom::json::emit<<root;
 
 	root << ctom::yaml::parse << 
-"int:\n"
+"\"int\" : #testcomment\n"
 "float:\n"
 "double:\n"
 "bar:\n"
-"  - bar-foo:\n"
+"  - bar-foo: azzo\n"
 "      foo-int: 10\n"
 "      foo-float: 5\n"
 "      foo-double: 2.5\n"
