@@ -70,31 +70,31 @@ int main( int argc, char* args[] ) {
 	Root_Impl root;
 	//std::cout<<ctom::json::emit<<root;
 
-	root << ctom::yaml::parse << 
-"\"int\" : #testcomment\n"
-"float:\n"
-"double:\n"
-"bar:\n"
-"  - bar-foo: azzo\n"
-"      foo-int: 10\n"
-"      foo-float: 5\n"
-"      foo-double: 2.5\n"
-"    bar-char: y\n"
-"    int-arr:\n"
-"      - 9\n"
-"      - 7\n"
-"      - 5\n"
-"  - bar-foo:\n"
-"      foo-int: 10\n"
-"      foo-float: 5\n"
-"      foo-double: 2.5\n"
-"    bar-char: y\n"
-"    int-arr:\n"
-"      - 3\n"
-"      - 2\n"
-"      - 1\n";
+	&root << ctom::yaml::parse << 
+	"\"int\" : #testcomment\n"
+	"float:\n"
+	"double:\n"
+	"bar:\n"
+	"  - bar-foo:\n"
+	"      foo-int: 10\n"
+	"      foo-float: 5.0f\n"
+	"      foo-double: 2.75\n"
+	"    bar-char: \"x\"\n"
+	"    int-arr:\n"
+	"      - 9\n"
+	"      - 7\n"
+	"      - 5\n"
+	"  - bar-foo:\n"
+	"      foo-int: 10\n"
+	"      foo-float: 5\n"
+	"      foo-double: 2.5\n"
+	"    bar-char: y\n"
+	"    int-arr:\n"
+	"      - 3\n"
+	"      - 5\n"
+	"      - 2";
 
-//	std::cout<<ctom::yaml::emit<<root;
+	std::cout<<ctom::yaml::emit<<root;
 
 	return 0;
 

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <string_view>
+#include <charconv>
 
 namespace ctom {
 namespace yaml {
@@ -101,6 +102,7 @@ ostream operator<<(ostream const& os, set<T> s){
         os<<s.key<<": ";
     }
     if(s.t != NULL) os<<s.t->value;
+    else os<<"null";
     return os << "\n";
 }
 
@@ -149,8 +151,8 @@ ostream operator<<(ostream const& os, set<T> s){
 
 template<typename T>
 struct pstream {
-    pstream(T& t):t(t){}
-    T& t;
+    pstream(T* t):t(t){}
+    T* t;
 };
 
 // Operator Instance
@@ -158,7 +160,7 @@ struct pstream {
 struct pstream_t{} parse;
 
 template<typename T>
-pstream<T> operator<<(T& t, pstream_t&) {
+pstream<T> operator<<(T* t, pstream_t&) {
     return pstream<T>(t);
 }
 
@@ -231,6 +233,30 @@ std::string_view post_delim(std::string_view& sv, std::string_view delim){
     return sv.substr(sv.find(delim)+1);
 }
 
+// Value-Parser!!
+
+
+template<typename T>
+void parse_val(T& t, std::string_view v){
+    auto val = std::from_chars(v.data(), v.data() + v.size(), t);
+    if(val.ec == std::errc::invalid_argument){
+        throw parse_exception("failed to parse value");
+    }
+}
+
+template<>
+void parse_val<char>(char& t, std::string_view v){
+    /*
+    auto val = std::from_chars(v.data(), v.data() + v.size(), t);
+    if(val.ec == std::errc::invalid_argument){
+        throw parse_exception("failed to parse value");
+    }*/
+    if(v.size() != 1){
+        throw parse_exception("invalid size for char");
+    }
+    t = v[0];
+}
+
 /*
 1. Extract Line
 2. Remove Comment, Whitespace
@@ -240,15 +266,22 @@ std::string_view post_delim(std::string_view& sv, std::string_view delim){
 */
 
 std::string_view get_line(std::string_view& sv){
-    auto line = pre_delim(sv, "\n");
+    if(sv.find("\n") == std::string_view::npos){
+        auto line = sv;
+        trim_prefix(sv, line);
+        return line;
+    }
+    auto line = sv.substr(0, sv.find("\n"));
     trim_prefix(sv, line);
     trim_prefix(sv, "\n");
     return line;
 }
 
 void trim_whitespace(std::string_view& line){
-   // line.remove_prefix(line.find_first_not_of(" "));
-    line.remove_suffix(line.size()-line.find_last_not_of(" \t")-1);
+    if(line.find_first_not_of(" \t") != std::string_view::npos)
+        line.remove_prefix(line.find_first_not_of(" \t"));
+    if(line.find_last_not_of(" \t") != std::string_view::npos)
+        line.remove_suffix(line.size()-line.find_last_not_of(" \t")-1);
 }
 
 void trim_line(std::string_view& line, indent& ind){
@@ -257,31 +290,25 @@ void trim_line(std::string_view& line, indent& ind){
 }
 
 std::string_view get_key(std::string_view line){
-    auto key = pre_delim(line, ":");
-    trim_whitespace(key);
-    trim_delim(key, "\"");
-
-    auto val = post_delim(line, ":");    
-    trim_whitespace(val);
-    trim_delim(val, "\"");
-
-    if(val == "")
-        return "";
-    return key;
+    if(line.find(":") != std::string_view::npos){
+        auto key = pre_delim(line, ":");
+        trim_whitespace(key);
+        trim_delim(key, "\"");
+        return key;
+    }
+    return "";
 }
 
 std::string_view get_val(std::string_view line){
-    auto key = pre_delim(line, ":");
-    trim_whitespace(key);
-    trim_delim(key, "\"");
-
-    auto val = post_delim(line, ":");
+    if(line.find(":") != std::string_view::npos){
+        auto val = post_delim(line, ":");
+        trim_whitespace(val);
+        trim_delim(val, "\"");
+        return val;
+    }
+    auto val = pre_delim(line, ":");
     trim_whitespace(val);
     trim_delim(val, "\"");
-    
-    if(val == ""){
-        return key; 
-    }
     return val;
 }
 
@@ -301,7 +328,16 @@ void operator<<(pstream<T> const& ps, pset s){
 
     // Validate, Parse
 
-    // ...
+    if(ps.t == NULL){
+        // can't parse value
+        return;
+    }
+
+    if(key != "" && key != s.key){
+        throw parse_exception("unexpected key");
+    }
+
+   parse_val(ps.t->value, val);
 
 }
 
@@ -323,7 +359,11 @@ void operator<<(pstream<T> const& ps, pset s){
  
         // Validate, Parse
 
-        // ...
+        if(key != "" && key != s.key)
+            throw parse_exception("unexpected key");
+
+        if(val != "")
+            throw parse_exception("unexpected value");
 
         // Update Subsequent Expected Indentation State
 
@@ -333,8 +373,8 @@ void operator<<(pstream<T> const& ps, pset s){
 
     }
 
-    ps.t.for_refs([&](auto&& ref){
-        *ref.node.impl << parse << pset{s.ind + DASH, NULL, s.t};
+    ps.t->for_refs([&](auto&& ref){
+        ref.node.impl << parse << pset{s.ind + DASH, NULL, s.t};
         for(auto& st: s.ind.state)
             st = TAB;
     });
@@ -359,7 +399,12 @@ void operator<<(pstream<T> const& ps, pset s){
 
         // Validate, Parse
 
-        // ...
+        if(key != "" && key != s.key)
+            throw parse_exception("unexpected key");
+
+        if(val != ""){
+            throw parse_exception("unexpected value");
+        }
 
         // Update Subsequent Expected Indentation State
 
@@ -369,8 +414,8 @@ void operator<<(pstream<T> const& ps, pset s){
 
     }
 
-    ps.t.for_refs([&](auto&& ref){
-        *ref.node.impl << parse << pset{s.ind, ref.key, s.t};
+    ps.t->for_refs([&](auto&& ref){
+        ref.node.impl << parse << pset{s.ind, ref.key, s.t};
          for(auto& st: s.ind.state)
             st = TAB;
     });
