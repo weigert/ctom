@@ -206,7 +206,7 @@ void operator<<(pstream<T> const& ps, std::string_view t){
 // Base Trim Operations
 
 void trim_prefix(std::string_view& sv, std::string_view pre){
-    if(!sv.starts_with(pre)) throw "failed to trim prefix";
+    if(!sv.starts_with(pre)) throw parse_exception("failed to trim prefix");
     sv.remove_prefix(pre.size());
 }
 
@@ -220,53 +220,88 @@ void trim_delim(std::string_view& sv, std::string_view delim){
 }
 
 std::string_view pre_delim(std::string_view& sv, std::string_view delim){
+    if(sv.find(delim) == std::string_view::npos)
+        return sv;
     return sv.substr(0, sv.find(delim));
 }
 
 std::string_view post_delim(std::string_view& sv, std::string_view delim){
-    return sv.substr(sv.find(delim));
+    if(sv.find(delim) == std::string_view::npos)
+        return "";
+    return sv.substr(sv.find(delim)+1);
 }
 
 /*
 1. Extract Line
-2. Remove Comment
+2. Remove Comment, Whitespace
 3. Extract Key / Val
 4. Check
 5. Parse
 */
 
+std::string_view get_line(std::string_view& sv){
+    auto line = pre_delim(sv, "\n");
+    trim_prefix(sv, line);
+    trim_prefix(sv, "\n");
+    return line;
+}
+
+void trim_whitespace(std::string_view& line){
+   // line.remove_prefix(line.find_first_not_of(" "));
+    line.remove_suffix(line.size()-line.find_last_not_of(" \t")-1);
+}
+
+void trim_line(std::string_view& line, indent& ind){
+    trim_prefix(line, ind.to_string());
+    line = pre_delim(line, "#");
+}
+
+std::string_view get_key(std::string_view line){
+    auto key = pre_delim(line, ":");
+    trim_whitespace(key);
+    trim_delim(key, "\"");
+
+    auto val = post_delim(line, ":");    
+    trim_whitespace(val);
+    trim_delim(val, "\"");
+
+    if(val == "")
+        return "";
+    return key;
+}
+
+std::string_view get_val(std::string_view line){
+    auto key = pre_delim(line, ":");
+    trim_whitespace(key);
+    trim_delim(key, "\"");
+
+    auto val = post_delim(line, ":");
+    trim_whitespace(val);
+    trim_delim(val, "\"");
+    
+    if(val == ""){
+        return key; 
+    }
+    return val;
+}
+
 template<val_t T>
 void operator<<(pstream<T> const& ps, pset s){
 
-    // Find the Delimiter
+    // Extract Line (w. Shift Pointer)
 
-    auto line = pre_delim(s.t, "\n");
-    trim_prefix(s.t, line);
-    trim_prefix(s.t, "\n");
+    auto line = get_line(s.t);
+    trim_line(line, s.ind);
 
-    // Extract Key
+    // Extract Key, Value
 
-    trim_prefix(line, s.ind.to_string());
-    line = pre_delim(line, "#");
-  
-    auto key = pre_delim(line, ":");
-  //  auto val = post_delim(line, ":");
-  //  trim_prefix(val, ":");
+    auto key = get_key(line);
+    auto val = get_val(line);
+    std::cout<<s.ind<<key<<val<<"\n";
 
-    if(key.find_first_not_of(" ") != 0){
-        throw parse_exception("unexpected indent");
-    }
+    // Validate, Parse
 
-    // Trim Whitespace
-
-    key.remove_suffix(key.size()-key.find_last_not_of(" ")-1);
-    trim_delim(key, "\"");
-
-    if(s.key != NULL && s.key != key){
-        throw parse_exception("unexpected key");
-    }
-
-    std::cout<<key<<"\n";
+    // ...
 
 }
 
@@ -275,16 +310,23 @@ void operator<<(pstream<T> const& ps, pset s){
 
     if(s.key != NULL){
 
-        auto line = pre_delim(s.t, "\n");
-        trim_prefix(s.t, line);
-        trim_prefix(s.t, "\n");
+        // Extract Line (w. Shift Pointer)
 
-        trim_prefix(line, s.ind.to_string());
-        line = pre_delim(line, "#");
+        auto line = get_line(s.t);
+        trim_line(line, s.ind);
 
-        auto key = pre_delim(line, ":");
-        std::cout<<key<<"\n";
+        // Extract Key, Value
+
+        auto key = get_key(line);
+        auto val = get_val(line);
+        std::cout<<s.ind<<key<<val<<"\n";
  
+        // Validate, Parse
+
+        // ...
+
+        // Update Subsequent Expected Indentation State
+
         for(auto& st: s.ind.state)
             st = TAB;
         s.ind = s.ind + TAB;
@@ -304,23 +346,22 @@ void operator<<(pstream<T> const& ps, pset s){
 
     if(s.key != NULL){
 
-        auto line = pre_delim(s.t, "\n");   
-        trim_prefix(s.t, line);
-        trim_prefix(s.t, "\n");
+        // Extract Line (w. Shift Pointer)
 
-        // Extract Key
-
+        auto line = get_line(s.t);
         trim_prefix(line, s.ind.to_string());
-        line = pre_delim(line, "#");
 
-        // Check Post-Colon
+        // Extract Key, Value
 
-        auto val = post_delim(line, ":");
-        trim_prefix(val, ":");
-        std::cout<<"VAL "<<val<<std::endl;
+        auto key = get_key(line);
+        auto val = get_val(line);
+        std::cout<<s.ind<<key<<val<<"\n";
 
-        auto key = pre_delim(line, ":");
-        std::cout<<key<<"\n";
+        // Validate, Parse
+
+        // ...
+
+        // Update Subsequent Expected Indentation State
 
         for(auto& st: s.ind.state)
             st = TAB;
