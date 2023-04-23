@@ -32,30 +32,49 @@ int main( int argc, char* args[] ) {
 	// Concrete Implementations
 
 	struct Arr_Impl: Arr {
-		int& a = Arr::val<0, int>(9);
-		int& b = Arr::val<1, int>(7);
-		int& c = Arr::val<2, int>(5);
+		int arr[3];
+		Arr_Impl(){
+			Arr::val<0>(arr[0]) = 9;
+			Arr::val<1>(arr[1]) = 7;
+			Arr::val<2>(arr[2]) = 5;
+		}
 	};
 
 	struct Foo_Impl: Foo {
-		int& a 	 	= Foo::val<"foo-int">(10);
-		float& b  	= Foo::val<"foo-float">(5.0f);
-		double& c 	= Foo::val<"foo-double">(2.5);
+		int a;
+		float b;
+		double c;
+		Foo_Impl(){
+			Foo::val<"foo-int">(a) = 10;
+			Foo::val<"foo-float">(b) = 5.0f;
+			Foo::val<"foo-double">(c) = 2.5;
+		}
 	};
 
 	struct Bar_Impl: Bar {
-		Foo_Impl& foo	= Bar::obj<"bar-foo", Foo_Impl>();
-		char& x 		= Bar::val<"bar-char">('y');
-		Arr_Impl& arr 	= Bar::arr<"int-arr", Arr_Impl>();
+		Foo_Impl foo;
+		char x;
+		Arr_Impl arr;
+		Bar_Impl(){
+			Bar::obj<"bar-foo">(foo);
+			Bar::val<"bar-char">(x) = 'y';
+			Bar::arr<"int-arr">(arr);
+		}
 	};
 
 	struct BarArr_Impl: BarArr {
-		Bar_Impl& b0 	= BarArr::obj<0, Bar_Impl>();
-		Bar_Impl& b1 	= BarArr::obj<1, Bar_Impl>();
+		Bar_Impl b[2];
+		BarArr_Impl(){
+			BarArr::obj<0>(b[0]);
+			BarArr::obj<1>(b[1]);
+		}
 	};
 
 	struct Root_Impl: Root {
-		BarArr_Impl& bar = Root::arr<"bar", BarArr_Impl>();
+		BarArr_Impl bar;
+		Root_Impl(){
+			Root::arr<"bar">(bar);
+		}
 	};
 
 	// Single Instantiation

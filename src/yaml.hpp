@@ -118,7 +118,7 @@ ostream operator<<(ostream const& os, set<T> s){
         os<<s.key<<": ";
     
     if(s.t != NULL) 
-        os<<s.t->value;
+        os<<*s.t->value;
     else os<<"null";
     
     return os << "\n";
@@ -372,7 +372,7 @@ void operator>>(S& stream, set<T> s){
 
     if(s.t != NULL)
     try {
-        parse_val(s.t->value, val);
+        parse_val(*s.t->value, val);
     } catch(parse_exception e){
         throw exception(stream.line, std::string("failed to parse value: ") + e.what());
     }

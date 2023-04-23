@@ -13,15 +13,22 @@ int main( int argc, char* args[] ) {
 	>;
 
 	struct Foo_Impl: Foo {
-		int& x 		= Foo::val<"foo-int">(1);
-		float& y 	= Foo::val<"foo-float">(0.5f);
-	//	double& z 	= Foo::val<"foo-double">(0.25);
+		Foo_Impl(){
+			Foo::val<"foo-int">(x) = 5;
+			Foo::val<"foo-float">(y) = 0.5f;
+			Foo::val<"foo-double">(z) = 0.25;
+		}
+		int x;
+		float y;
+		double z;
 	} foo_impl;
 
 	ctom::print(foo_impl);
 
 	foo_impl.get<"foo-int">() = 2;
 	foo_impl.get<"foo-float">() = 0.25f;
+
+	foo_impl.x = 3;
 
 	ctom::print(foo_impl);
 
@@ -30,10 +37,13 @@ int main( int argc, char* args[] ) {
 	using Barr = ctom::arr<4, int>;
 
 	struct Barr_Impl: Barr {
-		int& a = Barr::val<0>(0);
-		int& b = Barr::val<1>(1);
-		int& c = Barr::val<2>(2);
-		int& d = Barr::val<3>(3);
+		Barr_Impl(){
+			Barr::val<0>(a) = 0;
+			Barr::val<1>(b) = 1;
+			Barr::val<2>(c) = 2;
+			Barr::val<3>(d) = 3;
+		}
+		int a, b, c, d;
 	} barr_impl;
 
 	ctom::print(barr_impl);
@@ -62,17 +72,28 @@ int main( int argc, char* args[] ) {
 	>;
 
 	struct Bar_Impl: Bar {
-		Foo_Impl& foo 		= Bar::obj<"bar-foo", Foo_Impl>();
-		char& c     		= Bar::val<"bar-char">('x');
-		Barr_Impl& barr 	= Bar::arr<"bar-barr", Barr_Impl>();
+		Bar_Impl(){
+			Bar::obj<"bar-foo">(foo);
+			Bar::val<"bar-char">(c) = 'x';
+			Bar::arr<"bar-barr">(bar);
+		}
+		Foo_Impl foo;
+		char c;
+		Barr_Impl bar;
 	};
 
+
 	struct Baz_Impl: Baz {
-		Bar_Impl& bar_impl 	= Baz::obj<"baz-bar", Bar_Impl>();
-		bool& b 			= Baz::val<"baz-bool">(true);
+		Baz_Impl(){
+			Baz::obj<"baz-bar">(bar_impl);
+			Baz::val<"baz-bool">(b) = true;
+		}
+		Bar_Impl bar_impl;
+		bool b;
 	} baz_impl;
 
 	ctom::print(baz_impl);
+
 
 	// Nested Arrays -> {Arrays, Objects}
 
@@ -85,18 +106,27 @@ int main( int argc, char* args[] ) {
 	using MarrArr = ctom::arr<2, Marr>;
 
 	struct Maz_Impl: Maz {
-		char& c 	= Maz::val<"maz-char">(' ');
+		Maz_Impl(){
+			Maz::val<"maz-char">(c) = ' ';
+		}
+		char c;
 	};
 
 	struct Marr_Impl: Marr {
-		Maz_Impl& maz0 	= Marr::obj<0, Maz_Impl>();
-		Maz_Impl& maz1 	= Marr::obj<1, Maz_Impl>();
-		Maz_Impl& maz2 	= Marr::obj<2, Maz_Impl>();
+		Marr_Impl(){
+			Marr::obj<0>(maz0);
+			Marr::obj<1>(maz1);
+			Marr::obj<2>(maz2);
+		}
+		Maz_Impl maz0, maz1, maz2;
 	};
 
 	struct MarrArr_Impl: MarrArr {
-		Marr_Impl& marr0 	= MarrArr::arr<0, Marr_Impl>();
-		Marr_Impl& marr1 	= MarrArr::arr<1, Marr_Impl>();	
+		Marr_Impl marr0, marr1;
+		MarrArr_Impl(){
+			MarrArr::arr<0>(marr0);
+			MarrArr::arr<1>(marr1);	
+		}
 	} marrarr_impl;
 
 	marrarr_impl.marr0.maz0.c = 'a';

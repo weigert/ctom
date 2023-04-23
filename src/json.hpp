@@ -90,7 +90,7 @@ ostream operator<<(ostream const& os, set<T> s){
     if(s.key != NULL){
         os<<"\""<<s.key<<"\": ";
     }
-    if(s.t != NULL) os<<"\""<<s.t->value<<"\"";
+    if(s.t != NULL) os<<"\""<<*s.t->value<<"\"";
     else os<<"\"\"";
     if(!s.last) os<<",";
     return os << "\n";
