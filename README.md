@@ -23,11 +23,9 @@ Instead of iterating over `json` or `yaml` node trees, you can statically declar
 It works by using modern c++ techniques including *concepts*, *template meta-programming* and *class-template argument deduction* to provide a **declarative** api. Originally inspired by `golang semantic tags`.
 
 ```c++
-using Foo = ctom::obj<
-    ctom::key<"my-int", int>                // declare object-model
->;
-
-struct Foo_Impl: Foo {
+struct Foo: ctom::obj<                              // declare model w. implementation
+    ctom::key<"my-int", int>
+>{
     int some_int = 2;
     Foo_Impl(){
       this->val<"my-int">() = some_int;
@@ -35,7 +33,7 @@ struct Foo_Impl: Foo {
 };
 
 int main(){
-    Foo_Impl foo;                                   // create-instance 
+    Foo foo;                                        // create-instance 
     std::cout<<ctom::yaml::emit<<foo;               // emit yaml to stream
 
     foo.some_int = 1;                               // change member via struct ref
