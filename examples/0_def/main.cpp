@@ -14,7 +14,7 @@ int main( int argc, char* args[] ) {
 
 	// Simple Array Declaration
 
-	struct Barr: ctom::seq<int, 6>{};
+	struct Barr: ctom::arr<int, 6>{};
 	ctom::print<Barr>();
 
 	// Nested Objects -> {Objects, Arrays}
@@ -38,9 +38,9 @@ int main( int argc, char* args[] ) {
 		ctom::key<"maz-char", char>
 	>{};
 
-	struct Marr: ctom::seq<Maz, 3>{};
+	struct Marr: ctom::arr<Maz, 3>{};
 
-	struct MarrArr: ctom::seq<Marr, 2>{};
+	struct MarrArr: ctom::arr<Marr, 2>{};
 
 	ctom::print<MarrArr>();
 
@@ -55,12 +55,7 @@ int main( int argc, char* args[] ) {
 
 	// Extended Array Declaration
 
-	struct MarrExt: Marr::ext<
-		ctom::ind<3, Maz>,
-		ctom::ind<4, Maz>,
-		ctom::ind<6, Maz>
-	>{};
-
+	struct MarrExt: Marr::ext<Maz, 2>{};
 	ctom::print<MarrExt>();
 
 	return 0;

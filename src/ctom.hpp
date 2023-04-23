@@ -133,12 +133,6 @@ struct key_impl: key_base {
   static constexpr auto val = S;
 };
 
-struct ind_alias_base{};
-struct key_alias_base{};
-
-template<typename T> concept ind_alias_t = std::derived_from<T, ctom::ind_alias_base>;
-template<typename T> concept key_alias_t = std::derived_from<T, ctom::key_alias_base>;
-
 // Specific Reference-SubType
 
 template<typename T> struct is_ind_ref {
@@ -162,6 +156,99 @@ struct is_key_ref<R<I, N>>{
 };
 
 template<typename T> concept key_ref_t = ref_t<T> && is_key_ref<T>::value;
+
+/*
+================================================================================
+                Implementation Forward Declarations and Aliases
+================================================================================
+*/
+
+// Node-Implementation Forward Declarations
+
+template<typename T> struct val_impl;
+template<ind_ref_t... T> struct arr_impl;
+template<key_ref_t... T> struct obj_impl;
+
+// Key and Index Aliases
+
+struct ind_alias_base{};
+struct key_alias_base{};
+
+template<typename T> concept ind_alias_t = std::derived_from<T, ctom::ind_alias_base>;
+template<typename T> concept key_alias_t = std::derived_from<T, ctom::key_alias_base>;
+
+// Key-Based Aliases
+
+template<constexpr_string ref, typename T> 
+struct key_alias;
+
+template<constexpr_string ref, typename T> 
+struct key_alias: key_alias_base {
+  typedef key_impl<ref> key_t;
+  typedef node_impl<val_impl<T>> node_t;
+};
+
+template<constexpr_string ref, arr_t T> 
+struct key_alias<ref, T>: key_alias_base {
+  typedef key_impl<ref> key_t;
+  typedef node_impl<T> node_t;
+};
+
+template<constexpr_string ref, obj_t T> 
+struct key_alias<ref, T>: key_alias_base {
+  typedef key_impl<ref> key_t;
+  typedef node_impl<T> node_t;
+};
+
+// Full Key-Alias Resolution
+
+template<constexpr_string ref, typename T> 
+using key = key_alias<ref, T>;
+
+template<key_alias_t... keys> 
+using obj = obj_impl<ctom::ref_impl<typename keys::key_t, typename keys::node_t>...>;
+
+// Ind-Based Aliases
+
+template<size_t N, typename T>
+struct ind_alias;
+
+template<size_t N, typename T>
+struct ind_alias: ind_alias_base {
+  typedef ind_impl<N> ind_t;
+  typedef node_impl<val_impl<T>> node_t;
+};
+
+template<size_t N, arr_t T>
+struct ind_alias<N, T>: ind_alias_base {
+  typedef ind_impl<N> ind_t;
+  typedef node_impl<T> node_t;
+};
+
+template<size_t N, obj_t T>
+struct ind_alias<N, T>: ind_alias_base {
+  typedef ind_impl<N> ind_t;
+  typedef node_impl<T> node_t;
+};
+
+// Full Ind-Alias Resolution
+
+template<size_t N, typename T> 
+using ind = ind_alias<N, T>;
+
+template<ind_alias_t... inds>
+using arr_ind_set = arr_impl<ctom::ref_impl<typename inds::ind_t, typename inds::node_t>...>;
+
+// Ind-Sequence Based Aliases
+
+template <typename T, size_t N, size_t... Is>
+auto ind_seq() {
+    if constexpr (N == 0) return arr_ind_set<ind<Is, T>...>(); // end case
+    else return ind_seq<T, N-1, N-1, Is...>(); // recursion
+}
+
+template <typename T, size_t N>
+using arr = std::decay_t<decltype(ind_seq<T, N>())>;
 
 /*
 ================================================================================
@@ -256,12 +343,6 @@ struct is_ref_unique<R, Rs...>{
 ================================================================================
 */
 
-// Node-Implementation Forward Declarations
-
-template<typename T> struct val_impl;
-template<ind_ref_t... T> struct arr_impl;
-template<key_ref_t... T> struct obj_impl;
-
 // Value
 
 template<typename T>
@@ -289,8 +370,8 @@ struct arr_impl: arr_base {
   std::tuple<refs...> nodes;
   static constexpr size_t size = std::tuple_size<std::tuple<refs...>>::value;
 
-  template<ind_alias_t... srefs>
-  using ext = arr_impl<refs..., ctom::ref_impl<typename srefs::ind_t, typename srefs::node_t>...>;
+  template <typename T, size_t N>
+  using ext = std::decay_t<decltype(ind_seq<T, N + size>())>;
 
   template<ctom::ind_t ind> struct index {
     static constexpr size_t value = ctom::index_refs<0, ind, refs...>::value;
@@ -597,92 +678,6 @@ void print(T& obj, std::string prefix){
   });
 
 }
-
-/*
-================================================================================
-                                    Aliases
-================================================================================
-*/
-
-
-// Ind-Based Aliases
-
-template<size_t N, typename T>
-struct ind;
-
-template<size_t N, typename T>
-struct ind: ind_alias_base {
-  typedef ind_impl<N> ind_t;
-  typedef node_impl<val_impl<T>> node_t;
-};
-
-template<size_t N, arr_t T>
-struct ind<N, T>: ind_alias_base {
-  typedef ind_impl<N> ind_t;
-  typedef node_impl<T> node_t;
-};
-
-template<size_t N, obj_t T>
-struct ind<N, T>: ind_alias_base {
-  typedef ind_impl<N> ind_t;
-  typedef node_impl<T> node_t;
-};
-
-template<ind_alias_t... inds>
-using arr = arr_impl<ctom::ref_impl<typename inds::ind_t, typename inds::node_t>...>;
-
-// Ind-Sequence Based Aliases
-
-
-
-
-
-
-
-template <typename T, size_t N, size_t... Is>
-auto make_index_sequence_impl() {
-    // only one branch is considered. The other may be ill-formed
-    if constexpr (N == 0) return arr<ind<Is, T>...>(); // end case
-    else return make_index_sequence_impl<T, N-1, N-1, Is...>(); // recursion
-}
-
-template <typename T, size_t N>
-using seq = std::decay_t<decltype(make_index_sequence_impl<T, N>())>;
-
-
-
-
-
-
-
-
-
-
-// Key-Based Aliases
-
-template<constexpr_string ref, typename T>
-struct key;
-
-template<constexpr_string ref, typename T>
-struct key: key_alias_base {
-  typedef key_impl<ref> key_t;
-  typedef node_impl<val_impl<T>> node_t;
-};
-
-template<constexpr_string ref, arr_t T>
-struct key<ref, T>: key_alias_base {
-  typedef key_impl<ref> key_t;
-  typedef node_impl<T> node_t;
-};
-
-template<constexpr_string ref, obj_t T>
-struct key<ref, T>: key_alias_base {
-  typedef key_impl<ref> key_t;
-  typedef node_impl<T> node_t;
-};
-
-template<key_alias_t... keys> 
-using obj = obj_impl<ctom::ref_impl<typename keys::key_t, typename keys::node_t>...>;
 
 } // End of Namespace
 

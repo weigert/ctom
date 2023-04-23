@@ -8,11 +8,7 @@ int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
 
-	struct Arr: ctom::arr<
-		ctom::ind<0, int>,
-		ctom::ind<1, int>,
-		ctom::ind<2, int>
-	>{};
+	struct Arr: ctom::arr<int, 3>{};
 
 	struct Foo: ctom::obj<
 		ctom::key<"foo-int", int>,
@@ -26,10 +22,7 @@ int main( int argc, char* args[] ) {
 		ctom::key<"int-arr", Arr>
 	>{};
 
-	struct BarArr: ctom::arr<
-		ctom::ind<0, Bar>,
-		ctom::ind<1, Bar>
-	>{};
+	struct BarArr: ctom::arr<Bar, 2>{};
 
 	struct Root: ctom::obj <
 		ctom::key<"int", int>,
