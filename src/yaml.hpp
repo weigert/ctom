@@ -11,7 +11,13 @@
 namespace ctom {
 namespace yaml {
 
-// Marshal
+/*
+================================================================================
+                        Stream-Operations and Exceptions
+================================================================================
+*/
+
+// Output
 
 // Stream-Forwarding Operator
 
@@ -19,7 +25,6 @@ struct ostream {
     ostream(std::ostream& os):os(os){}
     std::ostream& os;
 };
-
 
 template<typename T>
 ostream operator<<(ostream const& q, const T& t) {
@@ -33,6 +38,58 @@ struct ostream_t{} emit;
 ostream operator<<(std::ostream& os, ostream_t&) {
     return ostream(os);
 }
+
+// Instream
+
+// Stream-Forwarding Operator
+
+template<typename T>
+struct pstream {
+    pstream(T* t):t(t){}
+    T* t;
+};
+
+// Operator Instance
+
+struct pstream_t{} parse;
+
+template<typename T>
+pstream<T> operator<<(T* t, pstream_t&) {
+    return pstream<T>(t);
+}
+
+// Node-Type Entrypoints
+
+
+// Custom Exception
+
+struct parse_exception: public std::exception {
+    std::string msg;
+    explicit parse_exception(std::string _msg):msg{_msg}{};
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
+
+/*
+================================================================================
+                    YAML Marshalling Implementation
+================================================================================
+*/
+
+
+
+
+
+// YAML-Specific Implementation
+
+// Marshal
+
+
+
+
+
+
 
 // Indentation State
 
@@ -147,36 +204,6 @@ ostream operator<<(ostream const& os, set<T> s){
 
 // Unmarshal
 
-// Stream-Forwarding Operator
-
-template<typename T>
-struct pstream {
-    pstream(T* t):t(t){}
-    T* t;
-};
-
-// Operator Instance
-
-struct pstream_t{} parse;
-
-template<typename T>
-pstream<T> operator<<(T* t, pstream_t&) {
-    return pstream<T>(t);
-}
-
-// Node-Type Entrypoints
-
-
-// Custom Exception
-
-struct parse_exception: public std::exception {
-    std::string msg;
-    explicit parse_exception(std::string _msg):msg{_msg}{};
-    const char* what() const noexcept override {
-        return msg.c_str();
-    }
-};
-
 
 
 
@@ -214,7 +241,7 @@ void trim_prefix(std::string_view& sv, std::string_view pre){
 
 void trim_delim(std::string_view& sv, std::string_view delim){
     if(sv.starts_with(delim) ^ sv.ends_with(delim))
-        throw "failed to trim delimiter";
+        throw parse_exception("failed to trim delimiter");
     if(sv.starts_with(delim) && sv.ends_with(delim)){
         sv.remove_prefix(delim.size());
         sv.remove_suffix(delim.size());
@@ -246,15 +273,15 @@ void parse_val(T& t, std::string_view v){
 
 template<>
 void parse_val<char>(char& t, std::string_view v){
-    /*
-    auto val = std::from_chars(v.data(), v.data() + v.size(), t);
-    if(val.ec == std::errc::invalid_argument){
-        throw parse_exception("failed to parse value");
-    }*/
     if(v.size() != 1){
         throw parse_exception("invalid size for char");
     }
     t = v[0];
+}
+
+template<>
+void parse_val<std::string>(std::string& t, std::string_view v){
+    t = v;
 }
 
 /*
@@ -324,7 +351,6 @@ void operator<<(pstream<T> const& ps, pset s){
 
     auto key = get_key(line);
     auto val = get_val(line);
-    std::cout<<s.ind<<key<<val<<"\n";
 
     // Validate, Parse
 
@@ -355,7 +381,6 @@ void operator<<(pstream<T> const& ps, pset s){
 
         auto key = get_key(line);
         auto val = get_val(line);
-        std::cout<<s.ind<<key<<val<<"\n";
  
         // Validate, Parse
 
@@ -395,7 +420,6 @@ void operator<<(pstream<T> const& ps, pset s){
 
         auto key = get_key(line);
         auto val = get_val(line);
-        std::cout<<s.ind<<key<<val<<"\n";
 
         // Validate, Parse
 

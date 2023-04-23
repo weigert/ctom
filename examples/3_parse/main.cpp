@@ -77,7 +77,7 @@ int main( int argc, char* args[] ) {
 	"bar:\n"
 	"  - bar-foo:\n"
 	"      foo-int: 10\n"
-	"      foo-float: 5.0f\n"
+	"      foo-float: 2.64\n"
 	"      foo-double: 2.75\n"
 	"    bar-char: \"x\"\n"
 	"    int-arr:\n"
@@ -91,7 +91,7 @@ int main( int argc, char* args[] ) {
 	"    bar-char: y\n"
 	"    int-arr:\n"
 	"      - 3\n"
-	"      - 5\n"
+	"      - 9\n"
 	"      - 2";
 
 	std::cout<<ctom::yaml::emit<<root;

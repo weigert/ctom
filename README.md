@@ -449,6 +449,9 @@ std::cout << ctom::json::emit << foo_impl;
 - swap some concepts with static assertions, for more helpful error messages
 - moving and assignment into array and stl containers would be very convenient and ease development using `ctom`.
 
+- better error messages for the parser
+- handling of different quote types, scalar types
+
 ### other thoughts
 
 There are a number of features which `c++20` doesn't have, which make a more elegant interface difficult. For instance, there are no static subscript operators, which mean that I can't properly index without using user-defined literals. But then to index with a number (e.g. `size_t`), this is not possible at all because of the way number-literals are (arbitrarily) restrained. What a mess.
