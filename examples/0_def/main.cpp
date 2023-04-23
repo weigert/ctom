@@ -57,13 +57,11 @@ int main( int argc, char* args[] ) {
 
 	ctom::print<MarrArr>();
 
-	/*
-
 	// Extended Object Declaration
 
 	struct FooExt: Foo::ext<
-		ctom::key::val<"foo-ext-int", int>,
-		ctom::key::obj<"foo-ext-foo", Foo>
+		ctom::key<"foo-ext-int", int>,
+		ctom::key<"foo-ext-foo", Foo>
 	>{};
 
 	ctom::print<FooExt>();
@@ -71,14 +69,12 @@ int main( int argc, char* args[] ) {
 	// Extended Array Declaration
 
 	struct MarrExt: Marr::ext<
-		ctom::ind::obj<3, Maz>,
-		ctom::ind::obj<4, Maz>,
-		ctom::ind::obj<5, Maz>
+		ctom::ind<3, Maz>,
+		ctom::ind<4, Maz>,
+		ctom::ind<5, Maz>
 	>{};
 
 	ctom::print<MarrExt>();
-	
-	*/
 
 	return 0;
 

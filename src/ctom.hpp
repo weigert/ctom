@@ -133,6 +133,12 @@ struct key_impl: key_base {
   static constexpr auto val = S;
 };
 
+struct ind_alias_base{};
+struct key_alias_base{};
+
+template<typename T> concept ind_alias_t = std::derived_from<T, ctom::ind_alias_base>;
+template<typename T> concept key_alias_t = std::derived_from<T, ctom::key_alias_base>;
+
 
 
 
@@ -309,8 +315,8 @@ struct arr_impl: arr_base {
   std::tuple<refs...> nodes;
   static constexpr size_t size = std::tuple_size<std::tuple<refs...>>::value;
 
-  template<ind_ref_t... srefs>
-  using ext = arr_impl<refs..., srefs...>;
+  template<ind_alias_t... srefs>
+  using ext = arr_impl<refs..., ctom::ref_impl<typename srefs::ind_t, typename srefs::node_t>...>;
 
   template<ctom::ind_t ind> struct index {
     static constexpr size_t value = ctom::index_refs<0, ind, refs...>::value;
@@ -386,8 +392,8 @@ struct obj_impl: obj_base {
 
   // Extension
 
-  template<key_ref_t... srefs>
-  using ext = obj_impl<refs..., srefs...>;
+  template<key_alias_t... srefs>
+  using ext = obj_impl<refs..., ctom::ref_impl<typename srefs::key_t, typename srefs::node_t>...>;
 
   // Indexing Methods for Both!
 
@@ -626,11 +632,6 @@ void print(T& obj, std::string prefix){
 
 // Ind-Based Aliases
 
-struct ind_alias_base{};
-
-template<typename T> 
-concept ind_alias_t = std::derived_from<T, ctom::ind_alias_base>;
-
 template<size_t N, typename T>
 struct ind;
 
@@ -656,11 +657,6 @@ template<ind_alias_t... inds>
 using arr = arr_impl<ctom::ref_impl<typename inds::ind_t, typename inds::node_t>...>;
 
 // Key-Based Aliases
-
-struct key_alias_base{};
-
-template<typename T> 
-concept key_alias_t = std::derived_from<T, ctom::key_alias_base>;
 
 template<constexpr_string ref, typename T>
 struct key;
