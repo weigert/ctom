@@ -27,7 +27,7 @@ struct Foo: ctom::obj<                              // declare model w. implemen
     ctom::key<"my-int", int>
 >{
     int some_int = 2;
-    Foo_Impl(){
+    Foo(){
       this->val<"my-int">() = some_int;
     }
 };
