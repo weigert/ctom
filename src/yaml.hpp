@@ -129,12 +129,17 @@ template<arr_t T>
 ostream operator<<(ostream const& os, set<T> s){
 
     if(s.key != NULL){
-        os<<s.ind<<s.key<<":\n";
+
+        os<<s.ind<<s.key<<":";
+        if(s.t == NULL) os<<" null";
+        os<<"\n";
+
         for(auto& st: s.ind.state)
             st = TAB;
         s.ind = s.ind + TAB;
     }
 
+    if(s.t != NULL)
     s.t->for_refs([&](auto&& ref){
         os << set{s.ind + DASH, NULL, ref.node.impl};
         for(auto& st: s.ind.state)
@@ -148,12 +153,17 @@ template<obj_t T>
 ostream operator<<(ostream const& os, set<T> s){
 
     if(s.key != NULL){
-        os<<s.ind<<s.key<<":\n";
+
+        os<<s.ind<<s.key<<":";
+        if(s.t == NULL) os<<" null";
+        os<<"\n";
+
         for(auto& st: s.ind.state)
             st = TAB;
         s.ind = s.ind + TAB;
     }
 
+    if(s.t != NULL)
     s.t->for_refs([&](auto&& ref){
         os << set{s.ind, ref.key, ref.node.impl};
         for(auto& st: s.ind.state)
@@ -370,7 +380,7 @@ void operator>>(S& stream, set<T> s){
 
     // Validate, Parse
 
-    if(s.t != NULL)
+    if(s.t != NULL && val != "")
     try {
         parse_val(*s.t->value, val);
     } catch(parse_exception e){
@@ -418,6 +428,7 @@ void operator>>(S& stream, set<T> s){
 
     }
 
+    if(s.t != NULL)
     s.t->for_refs([&](auto&& ref){
         stream >> set{s.ind + DASH, NULL, ref.node.impl};
         for(auto& st: s.ind.state)
@@ -465,6 +476,7 @@ void operator>>(S& stream, set<T> s){
 
     }
 
+    if(s.t != NULL)
     s.t->for_refs([&](auto&& ref){
         stream >> set{s.ind, ref.key, ref.node.impl};
         for(auto& st: s.ind.state)

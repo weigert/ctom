@@ -400,6 +400,12 @@ struct arr_impl: arr_base {
     return *get<ind_impl<ind>>().node.impl;
   }
 
+  template<size_t _ind>
+  auto& val(){
+    auto& ref = get<ind_impl<_ind>>();
+    return ref.node;
+  }
+
   // Static and Non-Static Iteration
 
   struct for_type {
@@ -414,14 +420,6 @@ struct arr_impl: arr_base {
     std::apply([&](auto&&... ref){
       (f.template operator()(ref), ...);
     }, nodes);
-  }
-
-  // Instance Assignment
-
-  template<size_t _ind>
-  auto& ind(){
-    auto& ref = get<ind_impl<_ind>>();
-    return ref.node;
   }
 };
 
@@ -457,6 +455,12 @@ struct obj_impl: obj_base {
     return *get<key_impl<s>>().node.impl;
   }
 
+  template<constexpr_string _key>
+  auto& val(){
+    auto& ref = get<key_impl<_key>>();
+    return ref.node;
+  }
+
   // Static and Non-Static Iteration
 
   struct for_type {
@@ -471,14 +475,6 @@ struct obj_impl: obj_base {
     std::apply([&](auto&&... ref){
       (f.template operator()(ref), ...);
     }, nodes);
-  }
-
-  // Instance Value Assignment
-
-  template<constexpr_string _key>
-  auto& key(){
-    auto& ref = get<key_impl<_key>>();
-    return ref.node;
   }
 };
 

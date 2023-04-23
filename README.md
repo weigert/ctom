@@ -28,10 +28,10 @@ using Foo = ctom::obj<
 >;
 
 struct Foo_Impl: Foo {
+    int some_int = 2;
     Foo_Impl(){
-      this->val<"my-int">(some_int) = 2;
+      this->val<"my-int">() = some_int;
     }
-    int some_int;
 };
 
 int main(){
@@ -225,12 +225,12 @@ You can also combine the declaration and the implementation directly.
 
 ```c++
 struct Foo_Impl: Foo {
+  int x = 1;
+  float y = 0.5f;
   Foo_Impl(){
-    this->val<"foo-int">(x) = 1;
-    this->val<"foo-float">(y) = 0.5f;
+    this->val<"foo-int">() = x;
+    this->val<"foo-float">() = y;
   }
-  int x;
-  float y;
 } foo_impl;
 
 ctom::print(foo_impl);
@@ -255,13 +255,13 @@ val: "foo-double" =
 
 ```c++
 struct Barr_Impl: Barr {
+  int barr[4] = {0, 1, 2, 3};
   Barr_Impl(){
-    this->val<0>(barr[0]) = 0;
-    this->val<1>(barr[1]) = 1;
-    this->val<2>(barr[2]) = 2;
-    this->val<3>(barr[3]) = 3;
+    this->val<0>() = barr[0];
+    this->val<1>() = barr[1];
+    this->val<2>() = barr[2];
+    this->val<3>() = barr[3];
   }
-  int barr[4];
 } barr_impl;
 
 ctom::print(barr_impl);
@@ -297,23 +297,23 @@ val: [3] = 3
 
 ```c++
 struct Bar_Impl: Bar {
-  Bar_Impl(){
-    this->obj<"bar-foo">(foo);
-    this->val<"bar-char">(c) = 'x';
-    this->arr<"bar-barr">(barr);
-  }
   Foo_Impl foo;
-  char c;
+  char c = 'x';
   Barr_Impl barr;
+  Bar_Impl(){
+    this->val<"bar-foo">() = foo;
+    this->val<"bar-char">() = c;
+    this->val<"bar-barr">() = barr;
+  }
 };
 
 struct Baz_Impl: Baz {
-  Baz_Impl(){
-    Baz::obj<"baz-bar">(bar_impl);
-    Baz::val<"baz-bool">(b) = true;
-  }
   Bar_Impl bar_impl;
-  bool b;
+  bool b = true;
+  Baz_Impl(){
+    this->val<"baz-bar">() = bar_impl;
+    this->val<"baz-bool">() = b;
+  }
 } baz_impl;
 
 ctom::print(baz_impl);
@@ -340,27 +340,27 @@ val: "baz-bool" = 1
 
 ```c++
 struct Maz_Impl: Maz {
+  char c = ' ';
   Maz_Impl(){
-     Maz::val<"maz-char">(c) = ' ';
+     this->val<"maz-char">() = c;
   }
-  char c;
 };
 
 struct Marr_Impl: Marr {
-  Marr_Impl(){
-    this->obj<0>(maz[0]);
-    this->obj<1>(maz[1]);
-    this->obj<2>(maz[2]);
-  }
   Maz_Impl maz[3];
+  Marr_Impl(){
+    this->val<0>() = maz[0];
+    this->val<1>() = maz[1];
+    this->val<2>() = maz[2];
+  }
 };
 
 struct MarrArr_Impl: MarrArr {
-  MarrArr_Impl(){
-    this->arr<0>(marr[0]);
-    this->arr<1>(marr[1]); 
-  }
   Marr_Impl marr[2];
+  MarrArr_Impl(){
+    this->val<0>() = marr[0];
+    this->val<1>() = marr[1]; 
+  }
 } marrarr_impl;
 
 marrarr_impl.marr[0].maz[0].c = 'a';
@@ -425,6 +425,8 @@ Note that parsing of serialized data is simplified in this library, because of t
 
 #### yaml
 
+##### emit
+
 ```c++
 std::cout << ctom::yaml::emit << foo_impl;
 ```
@@ -435,7 +437,22 @@ std::cout << ctom::yaml::emit << foo_impl;
 "foo-double": null
 ```
 
-`ctom::yaml::parse`: **WIP**
+##### parse
+
+```c++
+std::ifstream yaml_file("config.yaml");
+if(yaml_file.is_open()){
+
+  try {
+    yaml_file >> ctom::yaml::parse >> foo_impl;
+  } catch(ctom::yaml::exception e){
+    std::cout<<"Failed to parse config.yaml: "<<e.what()<<std::endl;
+  }
+
+  yaml_file.close();
+
+}
+```
 
 #### json
 
@@ -457,7 +474,6 @@ std::cout << ctom::json::emit << foo_impl;
 
 ### todo
 
-- better interface out of the ctom interface for defining our object-models, particularly array-types
 - the various serialization formats / namespace should implement static iterators to validate the object-models (e.g.: valid json keys, valid yaml keys)
 - swap some concepts with static assertions, for more helpful error messages
 - moving and assignment into array and stl containers would be very convenient and ease development using `ctom`.

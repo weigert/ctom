@@ -36,9 +36,9 @@ int main( int argc, char* args[] ) {
 	struct Arr_Impl: Arr {
 		int arr[3] = {9, 7, 5};
 		Arr_Impl(){
-			this->ind<0>() = arr[0];
-			this->ind<1>() = arr[1];
-			this->ind<2>() = arr[2];			
+			this->val<0>() = arr[0];
+			this->val<1>() = arr[1];
+			this->val<2>() = arr[2];			
 		}
 	};
 
@@ -47,9 +47,9 @@ int main( int argc, char* args[] ) {
 		float b = 5.0f;
 		double c = 2.5;
 		Foo_Impl(){
-			this->key<"foo-int">() = a;
-			this->key<"foo-float">() = b;
-			this->key<"foo-double">() = c;
+			this->val<"foo-int">() = a;
+			this->val<"foo-float">() = b;
+			this->val<"foo-double">() = c;
 		}
 	};
 
@@ -58,17 +58,17 @@ int main( int argc, char* args[] ) {
 		char x = 'y';
 		Arr_Impl arr;
 		Bar_Impl(){
-			this->key<"bar-foo">() = foo;
-			this->key<"bar-char">() = x;
-			this->key<"int-arr">() = arr;
+			this->val<"bar-foo">() = foo;
+			this->val<"bar-char">() = x;
+			this->val<"int-arr">() = arr;
 		}
 	};
 
 	struct BarArr_Impl: BarArr {
 		Bar_Impl b[2];
 		BarArr_Impl(){	
-			this->ind<0>() = b[0];
-			this->ind<1>() = b[1];
+			this->val<0>() = b[0];
+			this->val<1>() = b[1];
 		}
 	};
 
@@ -76,8 +76,10 @@ int main( int argc, char* args[] ) {
 		BarArr_Impl bar;
 		int x = 6;
 		Root_Impl(){
-			this->key<"bar">() = bar;
-			this->key<"int">() = x;
+			this->val<"bar">() = bar;
+			this->val<"int">() = bar.b[0].foo.a;	// reference variables
+			this->val<"float">() = bar.b[1].foo.b;
+			this->val<"double">() = bar.b[0].foo.c;
 		}
 	};
 
