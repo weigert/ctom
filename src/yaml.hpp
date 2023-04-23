@@ -43,19 +43,16 @@ ostream operator<<(std::ostream& os, ostream_t&) {
 
 // Stream-Forwarding Operator
 
-template<typename T>
 struct pstream {
-    pstream(T* t):t(t){}
-    T* t;
+    pstream(std::string_view& sv):sv(sv){}
+    std::string_view& sv;
 };
 
 // Operator Instance
 
 struct pstream_t{} parse;
-
-template<typename T>
-pstream<T> operator<<(T* t, pstream_t&) {
-    return pstream<T>(t);
+pstream operator>>(std::string_view& t, pstream_t&) {
+    return pstream(t);
 }
 
 // Node-Type Entrypoints
@@ -210,26 +207,23 @@ ostream operator<<(ostream const& os, set<T> s){
 
 
 
-
-struct pset {
-    indent ind;
-    const char* key;
-    std::string_view& t;
-};
-
+/*
 template<val_t T>
-void operator<<(pstream<T> const& ps, std::string_view t){
-    ps << pset{{}, NULL, t};
+void operator>>(pstream const& ps, T& t){
+    ps >> set{{}, NULL, &t};
 }
 
 template<arr_t T>
-void operator<<(pstream<T> const& ps, std::string_view t){
-    ps << pset{{}, NULL, t};
+void operator>>(pstream const& ps, T& t){
+    ps >> set{{}, NULL, &t};
 }
 
+
+*/
+
 template<obj_t T>
-void operator<<(pstream<T> const& ps, std::string_view t){
-    ps << pset{{}, NULL, t};
+void operator>>(pstream const& ps, T& t){
+    ps >> set{{}, NULL, &t};
 }
 
 // Base Trim Operations
@@ -340,47 +334,48 @@ std::string_view get_val(std::string_view line){
 }
 
 template<val_t T>
-void operator<<(pstream<T> const& ps, pset s){
+void operator>>(pstream const& ps, set<T> s){
 
     // Extract Line (w. Shift Pointer)
 
-    auto line = get_line(s.t);
+    auto line = get_line(ps.sv);
     trim_line(line, s.ind);
 
     // Extract Key, Value
 
     auto key = get_key(line);
     auto val = get_val(line);
+    std::cout<<s.ind<<key<<val<<"\n";
+
+    if(s.key != NULL){    
+        if(key != "" && key != s.key){
+            throw parse_exception("unexpected key");
+        }
+    }     
 
     // Validate, Parse
 
-    if(ps.t == NULL){
-        // can't parse value
-        return;
+    if(s.t != NULL){
+        parse_val(s.t->value, val);
     }
-
-    if(key != "" && key != s.key){
-        throw parse_exception("unexpected key");
-    }
-
-   parse_val(ps.t->value, val);
 
 }
 
 template<arr_t T>
-void operator<<(pstream<T> const& ps, pset s){
+void operator>>(pstream const& ps, set<T> s){
 
     if(s.key != NULL){
 
         // Extract Line (w. Shift Pointer)
 
-        auto line = get_line(s.t);
+        auto line = get_line(ps.sv);
         trim_line(line, s.ind);
 
         // Extract Key, Value
 
         auto key = get_key(line);
         auto val = get_val(line);
+        std::cout<<s.ind<<key<<val<<"\n";
  
         // Validate, Parse
 
@@ -398,8 +393,9 @@ void operator<<(pstream<T> const& ps, pset s){
 
     }
 
-    ps.t->for_refs([&](auto&& ref){
-        ref.node.impl << parse << pset{s.ind + DASH, NULL, s.t};
+    if(s.t != NULL)
+    s.t->for_refs([&](auto&& ref){
+        ps >> set{s.ind + DASH, NULL, ref.node.impl};
         for(auto& st: s.ind.state)
             st = TAB;
     });
@@ -407,19 +403,20 @@ void operator<<(pstream<T> const& ps, pset s){
 }
 
 template<obj_t T>
-void operator<<(pstream<T> const& ps, pset s){
+void operator>>(pstream const& ps, set<T> s){
 
     if(s.key != NULL){
 
         // Extract Line (w. Shift Pointer)
 
-        auto line = get_line(s.t);
+        auto line = get_line(ps.sv);
         trim_prefix(line, s.ind.to_string());
 
         // Extract Key, Value
 
         auto key = get_key(line);
         auto val = get_val(line);
+        std::cout<<s.ind<<key<<val<<"\n";
 
         // Validate, Parse
 
@@ -438,9 +435,10 @@ void operator<<(pstream<T> const& ps, pset s){
 
     }
 
-    ps.t->for_refs([&](auto&& ref){
-        ref.node.impl << parse << pset{s.ind, ref.key, s.t};
-         for(auto& st: s.ind.state)
+    if(s.t != NULL)
+    s.t->for_refs([&](auto&& ref){
+        ps >> set{s.ind, ref.key, ref.node.impl};
+        for(auto& st: s.ind.state)
             st = TAB;
     });
 

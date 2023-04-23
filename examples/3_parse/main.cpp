@@ -63,6 +63,7 @@ int main( int argc, char* args[] ) {
 
 	struct Root_Impl: Root {
 		BarArr_Impl& bar = Root::arr<"bar", BarArr_Impl>();
+		int& x = Root::val<"int">(6);
 	};
 
 	// Single Instantiation
@@ -70,8 +71,7 @@ int main( int argc, char* args[] ) {
 	Root_Impl root;
 	//std::cout<<ctom::json::emit<<root;
 
-	&root << ctom::yaml::parse << 
-	"\"int\" : #testcomment\n"
+	std::string_view t = "\"int\" : 1#testcomment\n"
 	"float:\n"
 	"double:\n"
 	"bar:\n"
@@ -94,7 +94,8 @@ int main( int argc, char* args[] ) {
 	"      - 9\n"
 	"      - 2";
 
-	std::cout<<ctom::yaml::emit<<root;
+	t >> ctom::yaml::parse >> root;
+	std::cout << ctom::yaml::emit << root;
 
 	return 0;
 
