@@ -23,14 +23,19 @@ Instead of iterating over `json` or `yaml` node trees, you can statically declar
 It works by using modern c++ techniques including *concepts*, *template meta-programming* and *class-template argument deduction* to provide a **declarative** api. Originally inspired by `golang semantic tags`.
 
 ```c++
-struct Foo: ctom::obj<
-    ctom::key::val<"my-int", int>           // declare object-model
->{
-    int& some_int = Foo::val<"my-int">(2);  // type-safe key tie-to ref member (moved)
+using Foo = ctom::obj<
+    ctom::key<"my-int", int>                // declare object-model
+>;
+
+struct Foo_Impl: Foo {
+    Foo_Impl(){
+      this->val<"my-int">(some_int) = 2;
+    }
+    int some_int;
 };
 
 int main(){
-    Foo foo;                                        // create-instance 
+    Foo_Impl foo;                                   // create-instance 
     std::cout<<ctom::yaml::emit<<foo;               // emit yaml to stream
 
     foo.some_int = 1;                               // change member via struct ref
@@ -63,11 +68,11 @@ Note that the following examples are **fully-static**, showing only the declarat
   <summary>Simple Object</summary>
 
 ```c++
-struct Foo: ctom::obj<
-    ctom::key::val<"foo-int", int>,
-    ctom::key::val<"foo-float", float>,
-    ctom::key::val<"foo-double", double>
->{};
+using Foo = ctom::obj<
+    ctom::key<"foo-int", int>,
+    ctom::key<"foo-float", float>,
+    ctom::key<"foo-double", double>
+>;
 
 ctom::print<Foo>(); // NOTE: FULLY STATIC! NO INSTANCE!
 ```
@@ -82,12 +87,7 @@ val: [foo-double]
   <summary>Simple Array</summary>
 
 ```c++
-struct Barr: ctom::arr<
-    ctom::ind::val<0, int>,
-    ctom::ind::val<1, int>,
-    ctom::ind::val<2, int>,
-    ctom::ind::val<3, int>
->{};
+using Barr = ctom::arr<4, int>;
 
 ctom::print<Barr>();
 ```
@@ -104,16 +104,16 @@ val: [3]
   <summary>Nested Object/Array</summary>
 
 ```c++
-struct Bar: ctom::obj<
-    ctom::key::obj<"bar-foo", Foo>,
-    ctom::key::val<"bar-char", char>,
-    ctom::key::arr<"bar-barr", Barr>
->{};
+using Bar = ctom::obj<
+    ctom::key<"bar-foo", Foo>,
+    ctom::key<"bar-char", char>,
+    ctom::key<"bar-barr", Barr>
+>;
 
-struct Baz: ctom::obj<
-    ctom::key::obj<"baz-bar", Bar>,
-    ctom::key::val<"baz-bool", bool>
->{};
+using Baz = ctom::obj<
+    ctom::key<"baz-bar", Bar>,
+    ctom::key<"baz-bool", bool>
+>;
 
 ctom::print<Baz>();
 ```
@@ -137,20 +137,13 @@ val: [baz-bool]
   <summary>Nested Array/Object</summary>
 
 ```c++
-struct Maz: ctom::obj<
-    ctom::key::val<"maz-char", char>
->{};
+using Maz = ctom::obj<
+    ctom::key<"maz-char", char>
+>;
 
-struct Marr: ctom::arr<
-    ctom::ind::obj<0, Maz>,
-    ctom::ind::obj<1, Maz>,
-    ctom::ind::obj<2, Maz>
->{};
+using Marr = ctom::arr<3, Maz>;
 
-struct MarrArr: ctom::arr<
-    ctom::ind::arr<0, Marr>,
-    ctom::ind::arr<1, Marr>
->{};
+using MarrArr = ctom::arr<2, Marr>;
 
 ctom::print<MarrArr>();
 ```
@@ -176,10 +169,10 @@ arr: [1]
   <summary>Extended Object</summary>
 
 ```c++
-struct FooExt: Foo::ext<
+using FooExt = Foo::ext<
     ctom::key::val<"foo-ext-int", int>,
     ctom::key::obj<"foo-ext-foo", Foo>
->{};
+>;
 
 ctom::print<FooExt>();
 ```
@@ -199,11 +192,7 @@ obj: [foo-ext-foo]
   <summary>Extended Array</summary>
 
 ```c++
-struct MarrExt: Marr::ext<
-    ctom::ind::obj<3, Maz>,
-    ctom::ind::obj<4, Maz>,
-    ctom::ind::obj<5, Maz>
->{};
+using MarrExt = Marr::ext<3, Maz>;
 
 ctom::print<MarrExt>();
 ```
@@ -236,9 +225,12 @@ You can also combine the declaration and the implementation directly.
 
 ```c++
 struct Foo_Impl: Foo {
-  int& x    = Foo::val<"foo-int">(1);
-  float& y  = Foo::val<"foo-float">(0.5f);
-//  double& z   = Foo::val<"foo-double">(0.25);
+  Foo_Impl(){
+    this->val<"foo-int">(x) = 1;
+    this->val<"foo-float">(y) = 0.5f;
+  }
+  int x;
+  float y;
 } foo_impl;
 
 ctom::print(foo_impl);
@@ -263,18 +255,21 @@ val: "foo-double" =
 
 ```c++
 struct Barr_Impl: Barr {
-  int& a = Barr::val<0>(0);
-  int& b = Barr::val<1>(1);
-  int& c = Barr::val<2>(2);
-  int& d = Barr::val<3>(3);
+  Barr_Impl(){
+    this->val<0>(barr[0]) = 0;
+    this->val<1>(barr[1]) = 1;
+    this->val<2>(barr[2]) = 2;
+    this->val<3>(barr[3]) = 3;
+  }
+  int barr[4];
 } barr_impl;
 
 ctom::print(barr_impl);
 
-barr_impl.a = 3;  // direct assignment
-barr_impl.b = 2;
-barr_impl.c = 1;
-barr_impl.d = 0;
+barr_impl.barr[0] = 3;  // direct assignment
+barr_impl.barr[1] = 2;
+barr_impl.barr[2] = 1;
+barr_impl.barr[3] = 0;
 
 Barr_Impl new_barr_impl;    // instances are properly separated!
 
@@ -302,14 +297,23 @@ val: [3] = 3
 
 ```c++
 struct Bar_Impl: Bar {
-  Foo_Impl& foo     = Bar::obj<"bar-foo", Foo_Impl>();
-  char& c           = Bar::val<"bar-char">('x');
-  Barr_Impl& barr   = Bar::arr<"bar-barr", Barr_Impl>();
+  Bar_Impl(){
+    this->obj<"bar-foo">(foo);
+    this->val<"bar-char">(c) = 'x';
+    this->arr<"bar-barr">(barr);
+  }
+  Foo_Impl foo;
+  char c;
+  Barr_Impl barr;
 };
 
 struct Baz_Impl: Baz {
-  Bar_Impl& bar_impl  = Baz::obj<"baz-bar", Bar_Impl>();
-  bool& b             = Baz::val<"baz-bool">(true);
+  Baz_Impl(){
+    Baz::obj<"baz-bar">(bar_impl);
+    Baz::val<"baz-bool">(b) = true;
+  }
+  Bar_Impl bar_impl;
+  bool b;
 } baz_impl;
 
 ctom::print(baz_impl);
@@ -336,26 +340,35 @@ val: "baz-bool" = 1
 
 ```c++
 struct Maz_Impl: Maz {
-  char& c   = Maz::val<"maz-char">(' ');
+  Maz_Impl(){
+     Maz::val<"maz-char">(c) = ' ';
+  }
+  char c;
 };
 
 struct Marr_Impl: Marr {
-  Maz_Impl& maz0  = Marr::obj<0, Maz_Impl>();
-  Maz_Impl& maz1  = Marr::obj<1, Maz_Impl>();
-  Maz_Impl& maz2  = Marr::obj<2, Maz_Impl>();
+  Marr_Impl(){
+    Marr::obj<0>(maz[0]);
+    Marr::obj<1>(maz[1]);
+    Marr::obj<2>(maz[2]);
+  }
+  Maz_Impl maz[3];
 };
 
 struct MarrArr_Impl: MarrArr {
-  Marr_Impl& marr0  = MarrArr::arr<0, Marr_Impl>();
-  Marr_Impl& marr1  = MarrArr::arr<1, Marr_Impl>(); 
+  MarrArr_Impl(){
+    MarrArr::arr<0>(marr[0]);
+    MarrArr::arr<1>(marr[1]); 
+  }
+  Marr_Impl marr[2];
 } marrarr_impl;
 
-marrarr_impl.marr0.maz0.c = 'a';
-marrarr_impl.marr0.maz1.c = 'b';
-marrarr_impl.marr0.maz2.c = 'c';
-marrarr_impl.marr1.maz0.c = 'd';
-marrarr_impl.marr1.maz1.c = 'e';
-marrarr_impl.marr1.maz2.c = 'f';
+marrarr_impl.marr[0].maz[0].c = 'a';
+marrarr_impl.marr[0].maz[1].c = 'b';
+marrarr_impl.marr[0].maz[2].c = 'c';
+marrarr_impl.marr[1].maz[0].c = 'd';
+marrarr_impl.marr[1].maz[1].c = 'e';
+marrarr_impl.marr[1].maz[2].c = 'f';
 
 ctom::print(marrarr_impl);
 
