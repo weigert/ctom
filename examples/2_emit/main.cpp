@@ -6,28 +6,28 @@ int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
 
-	struct Arr: ctom::arr<int, 3>{};
+	using Arr = ctom::arr<int, 3>;
 
-	struct Foo: ctom::obj<
+	using Foo = ctom::obj<
 		ctom::key<"foo-int", int>,
 		ctom::key<"foo-float", float>,
 		ctom::key<"foo-double", double>
-	>{};
+	>;
 
-	struct Bar: ctom::obj<
+	using Bar = ctom::obj<
 		ctom::key<"bar-foo", Foo>,
 		ctom::key<"bar-char", char>,
 		ctom::key<"int-arr", Arr>
-	>{};
+	>;
 
-	struct BarArr: ctom::arr<Bar, 2>{};
+	using BarArr = ctom::arr<Bar, 2>;
 
-	struct Root: ctom::obj <
+	using Root = ctom::obj <
 		ctom::key<"int", int>,
 		ctom::key<"float", float>,
 		ctom::key<"double", double>,
 		ctom::key<"bar", BarArr>
-	>{};
+	>;
 
 	// Concrete Implementations
 

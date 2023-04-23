@@ -4,58 +4,58 @@ int main( int argc, char* args[] ) {
 
 	// Simple Object Declaration
 
-	struct Foo: ctom::obj<
+	using Foo = ctom::obj<
 		ctom::key<"foo-int", int>,
 		ctom::key<"foo-float", float>,
 		ctom::key<"foo-double", double>
-	>{};
+	>;
 
 	ctom::print<Foo>(); // NOTE: FULLY STATIC! NO INSTANCE!
 
 	// Simple Array Declaration
 
-	struct Barr: ctom::arr<int, 6>{};
+	using Barr = ctom::arr<int, 6>;
 	ctom::print<Barr>();
 
 	// Nested Objects -> {Objects, Arrays}
 
-	struct Bar: ctom::obj<
+	using Bar = ctom::obj<
 		ctom::key<"bar-foo", Foo>,
 		ctom::key<"bar-char", char>,
 		ctom::key<"bar-barr", Barr>
-	>{};
+	>;
 
-	struct Baz: ctom::obj<
+	using Baz = ctom::obj<
 		ctom::key<"baz-bar", Bar>,
 		ctom::key<"baz-bool", bool>
-	>{};
+	>;
 
 	ctom::print<Baz>();
 
 	// Nested Arrays -> {Arrays, Objects}
 
-	struct Maz: ctom::obj<
+	using Maz = ctom::obj<
 		ctom::key<"maz-char", char>
-	>{};
+	>;
 
-	struct Marr: ctom::arr<Maz, 3>{};
+	using Marr = ctom::arr<Maz, 3>;
 
-	struct MarrArr: ctom::arr<Marr, 2>{};
+	using MarrArr = ctom::arr<Marr, 2>;
 
 	ctom::print<MarrArr>();
 
 	// Extended Object Declaration
 
-	struct FooExt: Foo::ext<
+	using FooExt = Foo::ext<
 		ctom::key<"foo-ext-int", int>,
 		ctom::key<"foo-ext-foo", Foo>
-	>{};
+	>;
 
 	ctom::print<FooExt>();
 
 	// Extended Array Declaration
 
-	struct MarrExt: Marr::ext<Maz, 2>{};
+	using MarrExt = Marr::ext<Maz, 2>;
 	ctom::print<MarrExt>();
 
 	return 0;

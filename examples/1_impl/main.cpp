@@ -6,11 +6,11 @@ int main( int argc, char* args[] ) {
 
 	// Simple Object Implementation
 
-	struct Foo: ctom::obj<
+	using Foo = ctom::obj<
 		ctom::key<"foo-int", int>,
 		ctom::key<"foo-float", float>,
 		ctom::key<"foo-double", double>
-	>{};
+	>;
 
 	struct Foo_Impl: Foo {
 		int& x 		= Foo::val<"foo-int">(1);
@@ -27,7 +27,7 @@ int main( int argc, char* args[] ) {
 
 	// Simple Array Implementation
 
-	struct Barr: ctom::arr<int, 4>{};
+	using Barr = ctom::arr<int, 4>;
 
 	struct Barr_Impl: Barr {
 		int& a = Barr::val<0>(0);
@@ -50,16 +50,16 @@ int main( int argc, char* args[] ) {
 
 	// Nested Objects -> {Objects, Arrays}
 
-	struct Bar: ctom::obj<
+	using Bar = ctom::obj<
 		ctom::key<"bar-foo", Foo>,
 		ctom::key<"bar-char", char>,
 		ctom::key<"bar-barr", Barr>
-	>{};
+	>;
 
-	struct Baz: ctom::obj<
+	using Baz = ctom::obj<
 		ctom::key<"baz-bar", Bar>,
 		ctom::key<"baz-bool", bool>
-	>{};
+	>;
 
 	struct Bar_Impl: Bar {
 		Foo_Impl& foo 		= Bar::obj<"bar-foo", Foo_Impl>();
@@ -76,13 +76,13 @@ int main( int argc, char* args[] ) {
 
 	// Nested Arrays -> {Arrays, Objects}
 
-	struct Maz: ctom::obj<
+	using Maz = ctom::obj<
 		ctom::key<"maz-char", char>
-	>{};
+	>;
 
-	struct Marr: ctom::arr<Maz, 3>{};
+	using Marr = ctom::arr<Maz, 3>;
 
-	struct MarrArr: ctom::arr<Marr, 2>{};
+	using MarrArr = ctom::arr<Marr, 2>;
 
 	struct Maz_Impl: Maz {
 		char& c 	= Maz::val<"maz-char">(' ');
