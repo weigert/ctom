@@ -5,9 +5,9 @@ int main( int argc, char* args[] ) {
 	// Simple Object Declaration
 
 	struct Foo: ctom::obj<
-		ctom::key::val<"foo-int", int>,
-		ctom::key::val<"foo-float", float>,
-		ctom::key::val<"foo-double", double>
+		ctom::key<"foo-int", int>,
+		ctom::key<"foo-float", float>,
+		ctom::key<"foo-double", double>
 	>{};
 
 	ctom::print<Foo>(); // NOTE: FULLY STATIC! NO INSTANCE!
@@ -15,10 +15,10 @@ int main( int argc, char* args[] ) {
 	// Simple Array Declaration
 
 	struct Barr: ctom::arr<
-		ctom::ind::val<0, int>,
-		ctom::ind::val<1, int>,
-		ctom::ind::val<2, int>,
-		ctom::ind::val<3, int>
+		ctom::ind<0, int>,
+		ctom::ind<1, int>,
+		ctom::ind<2, int>,
+		ctom::ind<3, int>
 	>{};
 
 	ctom::print<Barr>();
@@ -26,14 +26,14 @@ int main( int argc, char* args[] ) {
 	// Nested Objects -> {Objects, Arrays}
 
 	struct Bar: ctom::obj<
-		ctom::key::obj<"bar-foo", Foo>,
-		ctom::key::val<"bar-char", char>,
-		ctom::key::arr<"bar-barr", Barr>
+		ctom::key<"bar-foo", Foo>,
+		ctom::key<"bar-char", char>,
+		ctom::key<"bar-barr", Barr>
 	>{};
 
 	struct Baz: ctom::obj<
-		ctom::key::obj<"baz-bar", Bar>,
-		ctom::key::val<"baz-bool", bool>
+		ctom::key<"baz-bar", Bar>,
+		ctom::key<"baz-bool", bool>
 	>{};
 
 	ctom::print<Baz>();
@@ -41,21 +41,23 @@ int main( int argc, char* args[] ) {
 	// Nested Arrays -> {Arrays, Objects}
 
 	struct Maz: ctom::obj<
-		ctom::key::val<"maz-char", char>
+		ctom::key<"maz-char", char>
 	>{};
 
 	struct Marr: ctom::arr<
-		ctom::ind::obj<0, Maz>,
-		ctom::ind::obj<1, Maz>,
-		ctom::ind::obj<2, Maz>
+		ctom::ind<0, Maz>,
+		ctom::ind<1, Maz>,
+		ctom::ind<2, Maz>
 	>{};
 
 	struct MarrArr: ctom::arr<
-		ctom::ind::arr<0, Marr>,
-		ctom::ind::arr<1, Marr>
+		ctom::ind<0, Marr>,
+		ctom::ind<1, Marr>
 	>{};
 
 	ctom::print<MarrArr>();
+
+	/*
 
 	// Extended Object Declaration
 
@@ -75,6 +77,8 @@ int main( int argc, char* args[] ) {
 	>{};
 
 	ctom::print<MarrExt>();
+	
+	*/
 
 	return 0;
 

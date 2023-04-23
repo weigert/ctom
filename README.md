@@ -449,7 +449,6 @@ std::cout << ctom::json::emit << foo_impl;
 - swap some concepts with static assertions, for more helpful error messages
 - moving and assignment into array and stl containers would be very convenient and ease development using `ctom`.
 
-- better error messages for the parser
 - handling of different quote types, scalar types
 
 ### other thoughts

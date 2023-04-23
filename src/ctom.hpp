@@ -133,6 +133,32 @@ struct key_impl: key_base {
   static constexpr auto val = S;
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Specific Reference-SubType
 
 template<typename T> struct is_ind_ref {
@@ -598,23 +624,67 @@ void print(T& obj, std::string prefix){
 ================================================================================
 */
 
-template<ind_ref_t... refs> using arr = arr_impl<refs...>;
-template<key_ref_t... keys> using obj = obj_impl<keys...>;
+// Ind-Based Aliases
 
-namespace key {
-  template<constexpr_string ref, typename T> using val = ctom::ref_impl<key_impl<ref>, node_impl<ctom::val_impl<T>>>;
-  template<constexpr_string ref, arr_t T> using arr = ctom::ref_impl<key_impl<ref>, node_impl<T>>;
-  template<constexpr_string ref, obj_t T> using obj = ctom::ref_impl<key_impl<ref>, node_impl<T>>;
+struct ind_alias_base{};
+
+template<typename T> 
+concept ind_alias_t = std::derived_from<T, ctom::ind_alias_base>;
+
+template<size_t N, typename T>
+struct ind;
+
+template<size_t N, typename T>
+struct ind: ind_alias_base {
+  typedef ind_impl<N> ind_t;
+  typedef node_impl<val_impl<T>> node_t;
 };
 
-namespace ind {
-  template<size_t ind, typename T> using val = ctom::ref_impl<ind_impl<ind>, node_impl<ctom::val_impl<T>>>;
-  template<size_t ind, arr_t T> using arr = ctom::ref_impl<ind_impl<ind>, node_impl<T>>;
-  template<size_t ind, obj_t T> using obj = ctom::ref_impl<ind_impl<ind>, node_impl<T>>;
+template<size_t N, arr_t T>
+struct ind<N, T>: ind_alias_base {
+  typedef ind_impl<N> ind_t;
+  typedef node_impl<T> node_t;
 };
 
-//template<size_t S> using ind = ind_impl<S>;
-//template<constexpr_string S> using key = key_impl<S>;
+template<size_t N, obj_t T>
+struct ind<N, T>: ind_alias_base {
+  typedef ind_impl<N> ind_t;
+  typedef node_impl<T> node_t;
+};
+
+template<ind_alias_t... inds> 
+using arr = arr_impl<ctom::ref_impl<typename inds::ind_t, typename inds::node_t>...>;
+
+// Key-Based Aliases
+
+struct key_alias_base{};
+
+template<typename T> 
+concept key_alias_t = std::derived_from<T, ctom::key_alias_base>;
+
+template<constexpr_string ref, typename T>
+struct key;
+
+template<constexpr_string ref, typename T>
+struct key: key_alias_base {
+  typedef key_impl<ref> key_t;
+  typedef node_impl<val_impl<T>> node_t;
+};
+
+template<constexpr_string ref, arr_t T>
+struct key<ref, T>: key_alias_base {
+  typedef key_impl<ref> key_t;
+  typedef node_impl<T> node_t;
+};
+
+template<constexpr_string ref, obj_t T>
+struct key<ref, T>: key_alias_base {
+  typedef key_impl<ref> key_t;
+  typedef node_impl<T> node_t;
+};
+
+template<key_alias_t... keys> 
+using obj = obj_impl<ctom::ref_impl<typename keys::key_t, typename keys::node_t>...>;
 
 } // End of Namespace
 
