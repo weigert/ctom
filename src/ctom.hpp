@@ -139,32 +139,6 @@ struct key_alias_base{};
 template<typename T> concept ind_alias_t = std::derived_from<T, ctom::ind_alias_base>;
 template<typename T> concept key_alias_t = std::derived_from<T, ctom::key_alias_base>;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Specific Reference-SubType
 
 template<typename T> struct is_ind_ref {
@@ -630,6 +604,7 @@ void print(T& obj, std::string prefix){
 ================================================================================
 */
 
+
 // Ind-Based Aliases
 
 template<size_t N, typename T>
@@ -653,8 +628,35 @@ struct ind<N, T>: ind_alias_base {
   typedef node_impl<T> node_t;
 };
 
-template<ind_alias_t... inds> 
+template<ind_alias_t... inds>
 using arr = arr_impl<ctom::ref_impl<typename inds::ind_t, typename inds::node_t>...>;
+
+// Ind-Sequence Based Aliases
+
+
+
+
+
+
+
+template <typename T, size_t N, size_t... Is>
+auto make_index_sequence_impl() {
+    // only one branch is considered. The other may be ill-formed
+    if constexpr (N == 0) return arr<ind<Is, T>...>(); // end case
+    else return make_index_sequence_impl<T, N-1, N-1, Is...>(); // recursion
+}
+
+template <typename T, size_t N>
+using seq = std::decay_t<decltype(make_index_sequence_impl<T, N>())>;
+
+
+
+
+
+
+
+
+
 
 // Key-Based Aliases
 
