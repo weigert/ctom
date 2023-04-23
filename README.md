@@ -348,17 +348,17 @@ struct Maz_Impl: Maz {
 
 struct Marr_Impl: Marr {
   Marr_Impl(){
-    Marr::obj<0>(maz[0]);
-    Marr::obj<1>(maz[1]);
-    Marr::obj<2>(maz[2]);
+    this->obj<0>(maz[0]);
+    this->obj<1>(maz[1]);
+    this->obj<2>(maz[2]);
   }
   Maz_Impl maz[3];
 };
 
 struct MarrArr_Impl: MarrArr {
   MarrArr_Impl(){
-    MarrArr::arr<0>(marr[0]);
-    MarrArr::arr<1>(marr[1]); 
+    this->arr<0>(marr[0]);
+    this->arr<1>(marr[1]); 
   }
   Marr_Impl marr[2];
 } marrarr_impl;

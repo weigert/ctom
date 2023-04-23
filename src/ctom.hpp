@@ -25,22 +25,7 @@ template<typename T> concept arr_t = std::derived_from<T, ctom::arr_base>;
 template<typename T> concept obj_t = std::derived_from<T, ctom::obj_base>;
 
 template<typename T>
-struct node_impl: node_base {
-  static constexpr auto type = T::type;
-
-  T* impl = NULL;
-  //~node_impl(){
-  //  if(impl != NULL) delete impl;
-  //}
-  template<typename V>
-  void operator=(const V& v){
-    *impl = v;
-  }
-  template<typename V>
-  void operator=(const V&& v){
-    *impl = v;
-  }
-};
+struct node_impl;
 
 // Static Check
 
@@ -168,6 +153,32 @@ template<typename T> concept key_ref_t = ref_t<T> && is_key_ref<T>::value;
 template<typename T> struct val_impl;
 template<ind_ref_t... T> struct arr_impl;
 template<key_ref_t... T> struct obj_impl;
+
+template<typename T>
+struct node_impl: node_base {
+  static constexpr auto type = T::type;
+
+  T* impl = NULL;
+
+  template<typename V>
+  void operator=(V& v){
+    if(impl == NULL){
+      impl = new val_impl<V>(v);
+    }
+    *impl = v;
+  }
+
+  template<arr_t V>
+  void operator=(V& t){
+    impl = &t;
+  }
+
+  template<obj_t V>
+  void operator=(V& t){
+    impl = &t;
+  }
+
+};
 
 // Key and Index Aliases
 
@@ -407,29 +418,10 @@ struct arr_impl: arr_base {
 
   // Instance Assignment
 
-  template<size_t ind, typename T>
-  auto& val(T& t){
-    auto& ref = get<ind_impl<ind>>();
-  //  static_assert(std::is_same<val_impl<T>, decltype(ref.node.impl)>::value, "can't assign val key to improper type");
-    auto i = new val_impl<T>(t);
-    ref.node.impl = i;
-    return *ref.node.impl->value;
-  }
-
-  template<size_t ind, typename T>
-  auto& obj(T& t){
-    auto& ref = get<ind_impl<ind>>();
-    static_assert(is_derived_node<node_impl<T>, decltype(ref.node)>::value, "can't assign obj ind to non-derived type");
-    ref.node.impl = &t;
-    return t;
-  }
-
-  template<size_t ind, typename T>
-  auto& arr(T& t){
-    auto& ref = get<ind_impl<ind>>();
-    static_assert(is_derived_node<node_impl<T>, decltype(ref.node)>::value, "can't assign arr ind to non-derived type");
-    ref.node.impl = &t;
-    return t;
+  template<size_t _ind>
+  auto& ind(){
+    auto& ref = get<ind_impl<_ind>>();
+    return ref.node;
   }
 };
 
@@ -483,29 +475,10 @@ struct obj_impl: obj_base {
 
   // Instance Value Assignment
 
-  template<constexpr_string key, typename T>
-  auto& val(T& t){
-    auto& ref = get<key_impl<key>>();
-  //  static_assert(std::is_same<val_impl<T>, decltype(ref.node.impl)>::value, "can't assign val key to improper type");
-    auto i = new val_impl<T>(t);
-    ref.node.impl = i;
-    return *ref.node.impl->value;
-  }
-
-  template<constexpr_string key, typename T>
-  auto& obj(T& t){
-    auto& ref = get<key_impl<key>>();
-    static_assert(is_derived_node<node_impl<T>, decltype(ref.node)>::value, "can't assign obj key to non-derived type");
-    ref.node.impl = &t;
-    return t;
-  }
-
-  template<constexpr_string key, typename T>
-  auto& arr(T& t){
-    auto& ref = get<key_impl<key>>();
-    static_assert(is_derived_node<node_impl<T>, decltype(ref.node)>::value, "can't assign arr key to non-derived type");
-    ref.node.impl = &t;
-    return t;
+  template<constexpr_string _key>
+  auto& key(){
+    auto& ref = get<key_impl<_key>>();
+    return ref.node;
   }
 };
 

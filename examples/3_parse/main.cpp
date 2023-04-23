@@ -34,50 +34,50 @@ int main( int argc, char* args[] ) {
 	// Concrete Implementations
 
 	struct Arr_Impl: Arr {
-		int arr[3];
+		int arr[3] = {9, 7, 5};
 		Arr_Impl(){
-			Arr::val<0>(arr[0]) = 9;
-			Arr::val<1>(arr[1]) = 7;
-			Arr::val<2>(arr[2]) = 5;			
+			this->ind<0>() = arr[0];
+			this->ind<1>() = arr[1];
+			this->ind<2>() = arr[2];			
 		}
 	};
 
 	struct Foo_Impl: Foo {
-		int a;
-		float b;
-		double c;
+		int a = 10;
+		float b = 5.0f;
+		double c = 2.5;
 		Foo_Impl(){
-			Foo::val<"foo-int">(a) = 10;
-			Foo::val<"foo-float">(b) = 5.0f;
-			Foo::val<"foo-double">(c) = 2.5;
+			this->key<"foo-int">() = a;
+			this->key<"foo-float">() = b;
+			this->key<"foo-double">() = c;
 		}
 	};
 
 	struct Bar_Impl: Bar {
 		Foo_Impl foo;
-		char x;
+		char x = 'y';
 		Arr_Impl arr;
 		Bar_Impl(){
-			Bar::obj<"bar-foo">(foo);
-			Bar::val<"bar-char">(x) = 'y';
-			Bar::arr<"int-arr">(arr);
+			this->key<"bar-foo">() = foo;
+			this->key<"bar-char">() = x;
+			this->key<"int-arr">() = arr;
 		}
 	};
 
 	struct BarArr_Impl: BarArr {
 		Bar_Impl b[2];
 		BarArr_Impl(){	
-			BarArr::obj<0>(b[0]);
-			BarArr::obj<1>(b[1]);
+			this->ind<0>() = b[0];
+			this->ind<1>() = b[1];
 		}
 	};
 
 	struct Root_Impl: Root {
 		BarArr_Impl bar;
-		int x;
+		int x = 6;
 		Root_Impl(){
-			Root::arr<"bar">(bar);
-			Root::val<"int">(x) = 6;
+			this->key<"bar">() = bar;
+			this->key<"int">() = x;
 		}
 	};
 

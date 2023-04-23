@@ -14,13 +14,13 @@ int main( int argc, char* args[] ) {
 
 	struct Foo_Impl: Foo {
 		Foo_Impl(){
-			Foo::val<"foo-int">(x) = 5;
-			Foo::val<"foo-float">(y) = 0.5f;
-			Foo::val<"foo-double">(z) = 0.25;
+			this->key<"foo-int">() = x;
+			this->key<"foo-float">() = y;
+			this->key<"foo-double">() = z;
 		}
-		int x;
-		float y;
-		double z;
+		int x = 5;
+		float y = 0.5f;
+		double z = 0.25;
 	} foo_impl;
 
 	ctom::print(foo_impl);
@@ -38,12 +38,15 @@ int main( int argc, char* args[] ) {
 
 	struct Barr_Impl: Barr {
 		Barr_Impl(){
-			Barr::val<0>(a) = 0;
-			Barr::val<1>(b) = 1;
-			Barr::val<2>(c) = 2;
-			Barr::val<3>(d) = 3;
+			this->ind<0>() = a;
+			this->ind<1>() = b;
+			this->ind<2>() = c;
+			this->ind<3>() = d;
 		}
-		int a, b, c, d;
+		int a = 0;
+		int b = 1;
+		int c = 2;
+		int d = 3;
 	} barr_impl;
 
 	ctom::print(barr_impl);
@@ -73,23 +76,23 @@ int main( int argc, char* args[] ) {
 
 	struct Bar_Impl: Bar {
 		Bar_Impl(){
-			Bar::obj<"bar-foo">(foo);
-			Bar::val<"bar-char">(c) = 'x';
-			Bar::arr<"bar-barr">(bar);
+			this->key<"bar-foo">() = foo;
+			this->key<"bar-char">() = c;
+			this->key<"bar-barr">() = bar;
 		}
 		Foo_Impl foo;
-		char c;
+		char c = 'x';
 		Barr_Impl bar;
 	};
 
 
 	struct Baz_Impl: Baz {
 		Baz_Impl(){
-			Baz::obj<"baz-bar">(bar_impl);
-			Baz::val<"baz-bool">(b) = true;
+			this->key<"baz-bar">() = bar_impl;
+			this->key<"baz-bool">() = b;
 		}
 		Bar_Impl bar_impl;
-		bool b;
+		bool b = true;
 	} baz_impl;
 
 	ctom::print(baz_impl);
@@ -114,9 +117,9 @@ int main( int argc, char* args[] ) {
 
 	struct Marr_Impl: Marr {
 		Marr_Impl(){
-			Marr::obj<0>(maz0);
-			Marr::obj<1>(maz1);
-			Marr::obj<2>(maz2);
+			this->ind<0>() = maz0;
+			this->ind<1>() = maz1;
+			this->ind<2>() = maz2;
 		}
 		Maz_Impl maz0, maz1, maz2;
 	};
@@ -124,8 +127,8 @@ int main( int argc, char* args[] ) {
 	struct MarrArr_Impl: MarrArr {
 		Marr_Impl marr0, marr1;
 		MarrArr_Impl(){
-			MarrArr::arr<0>(marr0);
-			MarrArr::arr<1>(marr1);	
+			this->ind<0>() = marr0;
+			this->ind<1>() = marr1;	
 		}
 	} marrarr_impl;
 
