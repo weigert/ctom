@@ -8,7 +8,7 @@ int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
 
-	using Arr = ctom::arr<int, 3>;
+	using Arr = ctom::arr<3, int>;
 
 	using Foo = ctom::obj<
 		ctom::key<"foo-int", int>,
@@ -22,7 +22,7 @@ int main( int argc, char* args[] ) {
 		ctom::key<"int-arr", Arr>
 	>;
 
-	using BarArr = ctom::arr<Bar, 2>;
+	using BarArr = ctom::arr<2, Bar>;
 
 	using Root = ctom::obj <
 		ctom::key<"int", int>,

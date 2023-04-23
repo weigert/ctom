@@ -27,7 +27,7 @@ int main( int argc, char* args[] ) {
 
 	// Simple Array Implementation
 
-	using Barr = ctom::arr<int, 4>;
+	using Barr = ctom::arr<4, int>;
 
 	struct Barr_Impl: Barr {
 		int& a = Barr::val<0>(0);
@@ -80,9 +80,9 @@ int main( int argc, char* args[] ) {
 		ctom::key<"maz-char", char>
 	>;
 
-	using Marr = ctom::arr<Maz, 3>;
+	using Marr = ctom::arr<3, Maz>;
 
-	using MarrArr = ctom::arr<Marr, 2>;
+	using MarrArr = ctom::arr<2, Marr>;
 
 	struct Maz_Impl: Maz {
 		char& c 	= Maz::val<"maz-char">(' ');

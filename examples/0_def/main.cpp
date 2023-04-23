@@ -14,7 +14,7 @@ int main( int argc, char* args[] ) {
 
 	// Simple Array Declaration
 
-	using Barr = ctom::arr<int, 6>;
+	using Barr = ctom::arr<6, int>;
 	ctom::print<Barr>();
 
 	// Nested Objects -> {Objects, Arrays}
@@ -38,9 +38,9 @@ int main( int argc, char* args[] ) {
 		ctom::key<"maz-char", char>
 	>;
 
-	using Marr = ctom::arr<Maz, 3>;
+	using Marr = ctom::arr<3, Maz>;
 
-	using MarrArr = ctom::arr<Marr, 2>;
+	using MarrArr = ctom::arr<2, Marr>;
 
 	ctom::print<MarrArr>();
 
@@ -55,7 +55,7 @@ int main( int argc, char* args[] ) {
 
 	// Extended Array Declaration
 
-	using MarrExt = Marr::ext<Maz, 2>;
+	using MarrExt = Marr::ext<2, Maz>;
 	ctom::print<MarrExt>();
 
 	return 0;

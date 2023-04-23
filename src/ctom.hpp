@@ -247,7 +247,7 @@ auto ind_seq() {
     else return ind_seq<T, N-1, N-1, Is...>(); // recursion
 }
 
-template <typename T, size_t N>
+template <size_t N, typename T>
 using arr = std::decay_t<decltype(ind_seq<T, N>())>;
 
 /*
@@ -370,7 +370,7 @@ struct arr_impl: arr_base {
   std::tuple<refs...> nodes;
   static constexpr size_t size = std::tuple_size<std::tuple<refs...>>::value;
 
-  template <typename T, size_t N>
+  template <size_t N, typename T>
   using ext = std::decay_t<decltype(ind_seq<T, N + size>())>;
 
   template<ctom::ind_t ind> struct index {
