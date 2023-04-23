@@ -2,6 +2,8 @@
 #include "../../src/yaml.hpp"
 #include "../../src/json.hpp"
 
+#include <fstream>
+
 int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
@@ -69,33 +71,20 @@ int main( int argc, char* args[] ) {
 	// Single Instantiation
 
 	Root_Impl root;
-	//std::cout<<ctom::json::emit<<root;
 
-	std::string_view t = "\"int\" : 1#testcomment\n"
-	"float:\n"
-	"double:\n"
-	"bar:\n"
-	"  - bar-foo:\n"
-	"      foo-int: 10\n"
-	"      foo-float: 2.64\n"
-	"      foo-double: 2.75\n"
-	"    bar-char: \"x\"\n"
-	"    int-arr:\n"
-	"      - 9\n"
-	"      - 7\n"
-	"      - 5\n"
-	"  - bar-foo:\n"
-	"      foo-int: 10\n"
-	"      foo-float: 5\n"
-	"      foo-double: 2.5\n"
-	"    bar-char: y\n"
-	"    int-arr:\n"
-	"      - 3\n"
-	"      - 9\n"
-	"      - 2";
+	std::ifstream yaml_file("config.yaml");
+	if(yaml_file.is_open()){
+	
+		try {
+			yaml_file >> ctom::yaml::parse >> root;
+			std::cout << ctom::yaml::emit << root;
+		} catch(ctom::yaml::exception e){
+			std::cout<<"Failed to parse config.yaml: "<<e.what()<<std::endl;
+		}
 
-	t >> ctom::yaml::parse >> root;
-	std::cout << ctom::yaml::emit << root;
+		yaml_file.close();
+
+	}
 
 	return 0;
 

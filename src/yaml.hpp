@@ -7,86 +7,16 @@
 #include <vector>
 #include <string_view>
 #include <charconv>
+#include <fstream>
 
 namespace ctom {
 namespace yaml {
 
 /*
 ================================================================================
-                        Stream-Operations and Exceptions
+                        YAML Emit/Parse Co-State
 ================================================================================
 */
-
-// Output
-
-// Stream-Forwarding Operator
-
-struct ostream {
-    ostream(std::ostream& os):os(os){}
-    std::ostream& os;
-};
-
-template<typename T>
-ostream operator<<(ostream const& q, const T& t) {
-    q.os << t;
-    return q;
-}
-
-// Operator Instance
-
-struct ostream_t{} emit;
-ostream operator<<(std::ostream& os, ostream_t&) {
-    return ostream(os);
-}
-
-// Instream
-
-// Stream-Forwarding Operator
-
-struct pstream {
-    pstream(std::string_view& sv):sv(sv){}
-    std::string_view& sv;
-};
-
-// Operator Instance
-
-struct pstream_t{} parse;
-pstream operator>>(std::string_view& t, pstream_t&) {
-    return pstream(t);
-}
-
-// Node-Type Entrypoints
-
-
-// Custom Exception
-
-struct parse_exception: public std::exception {
-    std::string msg;
-    explicit parse_exception(std::string _msg):msg{_msg}{};
-    const char* what() const noexcept override {
-        return msg.c_str();
-    }
-};
-
-/*
-================================================================================
-                    YAML Marshalling Implementation
-================================================================================
-*/
-
-
-
-
-
-// YAML-Specific Implementation
-
-// Marshal
-
-
-
-
-
-
 
 // Indentation State
 
@@ -117,10 +47,6 @@ indent operator+(indent ind, indentstate state){
     return ind;
 }
 
-ostream operator<<(ostream const& os, indent& i) {
-    return os << i.to_string();
-}
-
 // Reference State
 
 template<typename T>
@@ -129,6 +55,40 @@ struct set {
     const char* key;
     T* t;
 };
+
+/*
+================================================================================
+                        YAML Marshal Stream Operators
+================================================================================
+*/
+
+// Output Stream and Forwarding Operator
+
+struct ostream {
+    ostream(std::ostream& os):os(os){}
+    std::ostream& os;
+};
+
+struct ostream_t{} emit;
+ostream operator<<(std::ostream& os, ostream_t&) {
+    return ostream(os);
+}
+
+template<typename T>
+ostream operator<<(ostream const& q, const T& t) {
+    q.os << t;
+    return q;
+}
+
+ostream operator<<(ostream const& os, indent& i) {
+    return os << i.to_string();
+}
+
+/*
+================================================================================
+                        YAML Marshal Implementation
+================================================================================
+*/
 
 // Node-Type Entrypoints
 
@@ -151,13 +111,18 @@ ostream operator<<(ostream const& os, T& t){
 
 template<val_t T>
 ostream operator<<(ostream const& os, set<T> s){
+
     os<<s.ind;
-    if(s.key != NULL){
+
+    if(s.key != NULL)
         os<<s.key<<": ";
-    }
-    if(s.t != NULL) os<<s.t->value;
+    
+    if(s.t != NULL) 
+        os<<s.t->value;
     else os<<"null";
+    
     return os << "\n";
+
 }
 
 template<arr_t T>
@@ -199,77 +164,122 @@ ostream operator<<(ostream const& os, set<T> s){
 
 }
 
-// Unmarshal
+/*
+================================================================================
+                        YAML Unmarshal Stream Operators
+================================================================================
+*/
 
+// Input Stream and Forwarding Operator
 
+struct istream_base{};
+struct istream_fwd{} parse;
 
+template<typename T>
+concept istream_t = std::derived_from<T, ctom::yaml::istream_base>;
 
+// fstream reader
 
+struct ifstream: istream_base {
+    ifstream(std::ifstream& ifs):ifs(ifs){}
+    std::ifstream& ifs;
+    std::string cur;
+    size_t line = 0;
+};
 
+ifstream operator>>(std::ifstream& ifs, istream_fwd&) {
+    return ifstream(ifs);
+}
+
+// string_view reader
 
 /*
-template<val_t T>
-void operator>>(pstream const& ps, T& t){
-    ps >> set{{}, NULL, &t};
-}
 
-template<arr_t T>
-void operator>>(pstream const& ps, T& t){
-    ps >> set{{}, NULL, &t};
+std::string_view get_line(istream<std::string_view>& is){
+    auto end = is.input.find("\n");
+    auto line = is.input.substr(0, end);
+    is.input.remove_prefix(line.size());
+    if(end != std::string_view::npos){
+        is.input.remove_prefix(1);
+    }
+    is.line++;
+    return line;
 }
-
 
 */
 
-template<obj_t T>
-void operator>>(pstream const& ps, T& t){
-    ps >> set{{}, NULL, &t};
-}
+
+
+// Exception Handling
+
+struct parse_exception: public std::exception {
+    std::string msg;
+    explicit parse_exception(std::string _msg):msg{_msg}{};
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
+
+struct exception: public std::exception {
+    std::string msg;
+    size_t line = 0;
+    explicit exception(size_t line, std::string _msg){
+        msg = "line ("+std::to_string(line)+"): "+_msg;
+    };
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
+
+/*
+================================================================================
+                        YAML Unmarshal Implementation
+================================================================================
+*/
 
 // Base Trim Operations
 
-void trim_prefix(std::string_view& sv, std::string_view pre){
-    if(!sv.starts_with(pre)) throw parse_exception("failed to trim prefix");
-    sv.remove_prefix(pre.size());
+std::string_view pre_delim(std::string_view sv, std::string_view delim){
+    if(sv.find(delim) != std::string_view::npos)
+        sv = sv.substr(0, sv.find(delim));
+    return sv;
+}
+
+void trim_prefix(std::string_view& sv, std::string_view prefix){
+    if(!sv.starts_with(prefix))
+        throw parse_exception("failed to trim prefix");
+    sv.remove_prefix(prefix.size());
 }
 
 void trim_delim(std::string_view& sv, std::string_view delim){
-    if(sv.starts_with(delim) ^ sv.ends_with(delim))
-        throw parse_exception("failed to trim delimiter");
     if(sv.starts_with(delim) && sv.ends_with(delim)){
         sv.remove_prefix(delim.size());
         sv.remove_suffix(delim.size());
     }
 }
 
-std::string_view pre_delim(std::string_view& sv, std::string_view delim){
-    if(sv.find(delim) == std::string_view::npos)
-        return sv;
-    return sv.substr(0, sv.find(delim));
+void trim_whitespace(std::string_view& line){
+    if(line.find_first_not_of(" \t") == std::string_view::npos)
+        line.remove_prefix(line.size());
+    if(line.find_first_not_of(" \t") != std::string_view::npos)
+        line.remove_prefix(line.find_first_not_of(" \t"));
+    if(line.find_last_not_of(" \t") != std::string_view::npos)
+        line.remove_suffix(line.size()-line.find_last_not_of(" \t")-1);
 }
 
-std::string_view post_delim(std::string_view& sv, std::string_view delim){
-    if(sv.find(delim) == std::string_view::npos)
-        return "";
-    return sv.substr(sv.find(delim)+1);
-}
-
-// Value-Parser!!
-
+// Value-Parser
 
 template<typename T>
 void parse_val(T& t, std::string_view v){
     auto val = std::from_chars(v.data(), v.data() + v.size(), t);
-    if(val.ec == std::errc::invalid_argument){
-        throw parse_exception("failed to parse value");
-    }
+    if(val.ec == std::errc::invalid_argument)
+        throw parse_exception("invalid argument");
 }
 
 template<>
 void parse_val<char>(char& t, std::string_view v){
-    if(v.size() != 1){
+    if(v.size() != 1)
         throw parse_exception("invalid size for char");
-    }
     t = v[0];
 }
 
@@ -278,112 +288,127 @@ void parse_val<std::string>(std::string& t, std::string_view v){
     t = v;
 }
 
-/*
-1. Extract Line
-2. Remove Comment, Whitespace
-3. Extract Key / Val
-4. Check
-5. Parse
-*/
+// Stream Base-Operations
 
-std::string_view get_line(std::string_view& sv){
-    if(sv.find("\n") == std::string_view::npos){
-        auto line = sv;
-        trim_prefix(sv, line);
-        return line;
+std::string_view get_line(ifstream& ifs){
+    while(!ifs.ifs.eof()){
+
+        std::getline(ifs.ifs, ifs.cur);
+        ifs.line++;
+
+        auto view = pre_delim(ifs.cur, "#");
+        if(view.find_first_not_of(" \t") != std::string_view::npos)
+            return view;
+
     }
-    auto line = sv.substr(0, sv.find("\n"));
-    trim_prefix(sv, line);
-    trim_prefix(sv, "\n");
-    return line;
-}
-
-void trim_whitespace(std::string_view& line){
-    if(line.find_first_not_of(" \t") != std::string_view::npos)
-        line.remove_prefix(line.find_first_not_of(" \t"));
-    if(line.find_last_not_of(" \t") != std::string_view::npos)
-        line.remove_suffix(line.size()-line.find_last_not_of(" \t")-1);
-}
-
-void trim_line(std::string_view& line, indent& ind){
-    trim_prefix(line, ind.to_string());
-    line = pre_delim(line, "#");
+    throw exception(ifs.line, "unexpected eof");
 }
 
 std::string_view get_key(std::string_view line){
-    if(line.find(":") != std::string_view::npos){
-        auto key = pre_delim(line, ":");
-        trim_whitespace(key);
-        trim_delim(key, "\"");
-        return key;
-    }
-    return "";
+    if(line.find(":") == std::string_view::npos)
+        return "";
+    auto key = line.substr(0, line.find(":"));
+    trim_whitespace(key);
+    trim_delim(key, "\"");
+    return key;
 }
 
 std::string_view get_val(std::string_view line){
-    if(line.find(":") != std::string_view::npos){
-        auto val = post_delim(line, ":");
-        trim_whitespace(val);
-        trim_delim(val, "\"");
-        return val;
-    }
-    auto val = pre_delim(line, ":");
+    std::string_view val;
+    if(line.find(":") == std::string_view::npos)
+        val = line.substr(0, line.find(":"));
+    else 
+        val = line.substr(line.find(":")+1);
     trim_whitespace(val);
     trim_delim(val, "\"");
     return val;
 }
 
-template<val_t T>
-void operator>>(pstream const& ps, set<T> s){
+// Node-Type Entrypoints
+
+template<istream_t S, val_t T>
+void operator>>(S stream, T& type){
+    stream >> set{{}, NULL, &type};
+}
+
+template<istream_t S, arr_t T>
+void operator>>(S stream, T& type){
+    stream >> set{{}, NULL, &type};
+}
+
+template<istream_t S, obj_t T>
+void operator>>(S stream, T& type){
+    stream >> set{{}, NULL, &type};
+}
+
+template<istream_t S, val_t T>
+void operator>>(S& stream, set<T> s){
 
     // Extract Line (w. Shift Pointer)
 
-    auto line = get_line(ps.sv);
-    trim_line(line, s.ind);
+    auto line = get_line(stream);
 
-    // Extract Key, Value
+    try {
+        trim_prefix(line, s.ind.to_string());
+        if(line.find_first_not_of(" \t") != 0)
+            throw parse_exception("overindented");
+    } catch(parse_exception e){
+        throw exception(stream.line, std::string("invalid indent: ") + e.what());
+    }
+
+    // Extract Key, Value; Validate
 
     auto key = get_key(line);
     auto val = get_val(line);
-    std::cout<<s.ind<<key<<val<<"\n";
+    //std::cout<<s.ind<<key<<val<<"\n";
 
-    if(s.key != NULL){    
-        if(key != "" && key != s.key){
-            throw parse_exception("unexpected key");
-        }
-    }     
+    if(s.key == NULL && key != "")
+        throw exception(stream.line, std::string("invalid key: want null, have \"") + std::string(key) + "\n");
+
+    if(s.key != NULL && key != s.key)
+        throw exception(stream.line, std::string("invalid key: want \"")+std::string(s.key)+"\", have \""+std::string(key)+"\"");
 
     // Validate, Parse
 
-    if(s.t != NULL){
+    if(s.t != NULL)
+    try {
         parse_val(s.t->value, val);
+    } catch(parse_exception e){
+        throw exception(stream.line, std::string("failed to parse value: ") + e.what());
     }
 
 }
 
-template<arr_t T>
-void operator>>(pstream const& ps, set<T> s){
+template<istream_t S, arr_t T>
+void operator>>(S& stream, set<T> s){
 
     if(s.key != NULL){
 
         // Extract Line (w. Shift Pointer)
 
-        auto line = get_line(ps.sv);
-        trim_line(line, s.ind);
+        auto line = get_line(stream);
 
-        // Extract Key, Value
+        try {
+            trim_prefix(line, s.ind.to_string());
+            if(line.find_first_not_of(" \t") != 0)
+                throw parse_exception("overindented");
+        } catch(parse_exception e){
+            throw exception(stream.line, std::string("invalid indent: ") + e.what());
+        }
+
+       // Extract Key, Value
 
         auto key = get_key(line);
         auto val = get_val(line);
-        std::cout<<s.ind<<key<<val<<"\n";
- 
+       // std::cout<<s.ind<<key<<val<<std::endl;
+
         // Validate, Parse
 
         if(key != "" && key != s.key)
-            throw parse_exception("unexpected key");
+            throw exception(stream.line, std::string("invalid key: want \"")+std::string(s.key)+"\", have \""+std::string(key)+"\"");
 
         if(val != "")
-            throw parse_exception("unexpected value");
+            throw exception(stream.line, std::string("unexpected value"));
 
         // Update Subsequent Expected Indentation State
 
@@ -393,39 +418,44 @@ void operator>>(pstream const& ps, set<T> s){
 
     }
 
-    if(s.t != NULL)
     s.t->for_refs([&](auto&& ref){
-        ps >> set{s.ind + DASH, NULL, ref.node.impl};
+        stream >> set{s.ind + DASH, NULL, ref.node.impl};
         for(auto& st: s.ind.state)
             st = TAB;
     });
 
 }
 
-template<obj_t T>
-void operator>>(pstream const& ps, set<T> s){
+template<istream_t S, obj_t T>
+void operator>>(S& stream, set<T> s){
+
+    // Extract Line (w. Shift Pointer)
 
     if(s.key != NULL){
 
-        // Extract Line (w. Shift Pointer)
+        auto line = get_line(stream);
 
-        auto line = get_line(ps.sv);
-        trim_prefix(line, s.ind.to_string());
+        try {
+            trim_prefix(line, s.ind.to_string());
+            if(line.find_first_not_of(" \t") != 0)
+                throw parse_exception("overindented");
+        } catch(parse_exception e){
+            throw exception(stream.line, std::string("invalid indent: ") + e.what());
+        }
 
         // Extract Key, Value
 
         auto key = get_key(line);
         auto val = get_val(line);
-        std::cout<<s.ind<<key<<val<<"\n";
+     //   std::cout<<s.ind<<key<<val<<std::endl;
 
         // Validate, Parse
 
         if(key != "" && key != s.key)
-            throw parse_exception("unexpected key");
-
-        if(val != ""){
-            throw parse_exception("unexpected value");
-        }
+            throw exception(stream.line, std::string("invalid key: want \"")+std::string(s.key)+"\", have \""+std::string(key)+"\"");
+        
+        if(val != "")
+            throw exception(stream.line, std::string("unexpected value"));
 
         // Update Subsequent Expected Indentation State
 
@@ -435,9 +465,8 @@ void operator>>(pstream const& ps, set<T> s){
 
     }
 
-    if(s.t != NULL)
     s.t->for_refs([&](auto&& ref){
-        ps >> set{s.ind, ref.key, ref.node.impl};
+        stream >> set{s.ind, ref.key, ref.node.impl};
         for(auto& st: s.ind.state)
             st = TAB;
     });
