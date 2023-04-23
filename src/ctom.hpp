@@ -29,9 +29,9 @@ struct node_impl: node_base {
   static constexpr auto type = T::type;
 
   T* impl = NULL;
-  ~node_impl(){
-    if(impl != NULL) delete impl;
-  }
+  //~node_impl(){
+  //  if(impl != NULL) delete impl;
+  //}
   template<typename V>
   void operator=(const V& v){
     *impl = v;
@@ -159,6 +159,99 @@ template<typename T> concept key_ref_t = ref_t<T> && is_key_ref<T>::value;
 
 /*
 ================================================================================
+                Implementation Forward Declarations and Aliases
+================================================================================
+*/
+
+// Node-Implementation Forward Declarations
+
+template<typename T> struct val_impl;
+template<ind_ref_t... T> struct arr_impl;
+template<key_ref_t... T> struct obj_impl;
+
+// Key and Index Aliases
+
+struct ind_alias_base{};
+struct key_alias_base{};
+
+template<typename T> concept ind_alias_t = std::derived_from<T, ctom::ind_alias_base>;
+template<typename T> concept key_alias_t = std::derived_from<T, ctom::key_alias_base>;
+
+// Key-Based Aliases
+
+template<constexpr_string ref, typename T> 
+struct key_alias;
+
+template<constexpr_string ref, typename T> 
+struct key_alias: key_alias_base {
+  typedef key_impl<ref> key_t;
+  typedef node_impl<val_impl<T>> node_t;
+};
+
+template<constexpr_string ref, arr_t T> 
+struct key_alias<ref, T>: key_alias_base {
+  typedef key_impl<ref> key_t;
+  typedef node_impl<T> node_t;
+};
+
+template<constexpr_string ref, obj_t T> 
+struct key_alias<ref, T>: key_alias_base {
+  typedef key_impl<ref> key_t;
+  typedef node_impl<T> node_t;
+};
+
+// Full Key-Alias Resolution
+
+template<constexpr_string ref, typename T> 
+using key = key_alias<ref, T>;
+
+template<key_alias_t... keys> 
+using obj = obj_impl<ctom::ref_impl<typename keys::key_t, typename keys::node_t>...>;
+
+// Ind-Based Aliases
+
+template<size_t N, typename T>
+struct ind_alias;
+
+template<size_t N, typename T>
+struct ind_alias: ind_alias_base {
+  typedef ind_impl<N> ind_t;
+  typedef node_impl<val_impl<T>> node_t;
+};
+
+template<size_t N, arr_t T>
+struct ind_alias<N, T>: ind_alias_base {
+  typedef ind_impl<N> ind_t;
+  typedef node_impl<T> node_t;
+};
+
+template<size_t N, obj_t T>
+struct ind_alias<N, T>: ind_alias_base {
+  typedef ind_impl<N> ind_t;
+  typedef node_impl<T> node_t;
+};
+
+// Full Ind-Alias Resolution
+
+template<size_t N, typename T> 
+using ind = ind_alias<N, T>;
+
+template<ind_alias_t... inds>
+using arr_ind_set = arr_impl<ctom::ref_impl<typename inds::ind_t, typename inds::node_t>...>;
+
+// Ind-Sequence Based Aliases
+
+template <typename T, size_t N, size_t... Is>
+auto ind_seq() {
+    if constexpr (N == 0) return arr_ind_set<ind<Is, T>...>(); // end case
+    else return ind_seq<T, N-1, N-1, Is...>(); // recursion
+}
+
+template <size_t N, typename T>
+using arr = std::decay_t<decltype(ind_seq<T, N>())>;
+
+/*
+================================================================================
                           Helper Constexpr Structs
 ================================================================================
 */
@@ -250,26 +343,21 @@ struct is_ref_unique<R, Rs...>{
 ================================================================================
 */
 
-// Node-Implementation Forward Declarations
-
-template<typename T> struct val_impl;
-template<ind_ref_t... T> struct arr_impl;
-template<key_ref_t... T> struct obj_impl;
-
 // Value
 
 template<typename T>
 struct val_impl: val_base {
-  T value;
-  val_impl(){}
-  val_impl(T&& t) noexcept {
-		value = t;
+  T* value;
+  val_impl(T& t) noexcept {
+		value = &t;
 	}
-  void operator=(const T& v){
-    value = v;
+  void operator=(T& v){
+    if(value != NULL)
+    *value = v;
   }
-  void operator=(const T&& v){
-    value = v;
+  void operator=(T&& v){
+    if(value != NULL)
+    *value = v;
   }
 };
 
@@ -283,8 +371,8 @@ struct arr_impl: arr_base {
   std::tuple<refs...> nodes;
   static constexpr size_t size = std::tuple_size<std::tuple<refs...>>::value;
 
-  template<ind_ref_t... srefs>
-  using ext = arr_impl<refs..., srefs...>;
+  template <size_t N, typename T>
+  using ext = std::decay_t<decltype(ind_seq<T, N + size>())>;
 
   template<ctom::ind_t ind> struct index {
     static constexpr size_t value = ctom::index_refs<0, ind, refs...>::value;
@@ -320,31 +408,28 @@ struct arr_impl: arr_base {
   // Instance Assignment
 
   template<size_t ind, typename T>
-  auto& val(const T& t){
+  auto& val(T& t){
     auto& ref = get<ind_impl<ind>>();
   //  static_assert(std::is_same<val_impl<T>, decltype(ref.node.impl)>::value, "can't assign val key to improper type");
-    auto i = new val_impl<T>();
+    auto i = new val_impl<T>(t);
     ref.node.impl = i;
-    ref.node.impl->value = t;
-    return ref.node.impl->value;
+    return *ref.node.impl->value;
   }
 
   template<size_t ind, typename T>
-  auto& obj(){
+  auto& obj(T& t){
     auto& ref = get<ind_impl<ind>>();
     static_assert(is_derived_node<node_impl<T>, decltype(ref.node)>::value, "can't assign obj ind to non-derived type");
-    auto t = new T();
-    ref.node.impl = t;
-    return *t;
+    ref.node.impl = &t;
+    return t;
   }
 
   template<size_t ind, typename T>
-  auto& arr(){
+  auto& arr(T& t){
     auto& ref = get<ind_impl<ind>>();
     static_assert(is_derived_node<node_impl<T>, decltype(ref.node)>::value, "can't assign arr ind to non-derived type");
-    auto t = new T();
-    ref.node.impl = t;
-    return *t;
+    ref.node.impl = &t;
+    return t;
   }
 };
 
@@ -360,8 +445,8 @@ struct obj_impl: obj_base {
 
   // Extension
 
-  template<key_ref_t... srefs>
-  using ext = obj_impl<refs..., srefs...>;
+  template<key_alias_t... srefs>
+  using ext = obj_impl<refs..., ctom::ref_impl<typename srefs::key_t, typename srefs::node_t>...>;
 
   // Indexing Methods for Both!
 
@@ -399,31 +484,28 @@ struct obj_impl: obj_base {
   // Instance Value Assignment
 
   template<constexpr_string key, typename T>
-  auto& val(const T& t){
+  auto& val(T& t){
     auto& ref = get<key_impl<key>>();
   //  static_assert(std::is_same<val_impl<T>, decltype(ref.node.impl)>::value, "can't assign val key to improper type");
-    auto i = new val_impl<T>();
+    auto i = new val_impl<T>(t);
     ref.node.impl = i;
-    ref.node.impl->value = t;
-    return ref.node.impl->value;
+    return *ref.node.impl->value;
   }
 
   template<constexpr_string key, typename T>
-  auto& obj(){
+  auto& obj(T& t){
     auto& ref = get<key_impl<key>>();
     static_assert(is_derived_node<node_impl<T>, decltype(ref.node)>::value, "can't assign obj key to non-derived type");
-    auto t = new T();
-    ref.node.impl = t;
-    return *t;
+    ref.node.impl = &t;
+    return t;
   }
 
   template<constexpr_string key, typename T>
-  auto& arr(){
+  auto& arr(T& t){
     auto& ref = get<key_impl<key>>();
     static_assert(is_derived_node<node_impl<T>, decltype(ref.node)>::value, "can't assign arr key to non-derived type");
-    auto t = new T();
-    ref.node.impl = t;
-    return *t;
+    ref.node.impl = &t;
+    return t;
   }
 };
 
@@ -511,7 +593,7 @@ void print(T&, std::string prefix = "");
 
 template<val_t T>
 void print(T& val, std::string prefix){
-  std::cout<<val.value;
+  std::cout<<*val.value;
 }
 
 template<arr_t T>
@@ -591,30 +673,6 @@ void print(T& obj, std::string prefix){
   });
 
 }
-
-/*
-================================================================================
-                                    Aliases
-================================================================================
-*/
-
-template<ind_ref_t... refs> using arr = arr_impl<refs...>;
-template<key_ref_t... keys> using obj = obj_impl<keys...>;
-
-namespace key {
-  template<constexpr_string ref, typename T> using val = ctom::ref_impl<key_impl<ref>, node_impl<ctom::val_impl<T>>>;
-  template<constexpr_string ref, arr_t T> using arr = ctom::ref_impl<key_impl<ref>, node_impl<T>>;
-  template<constexpr_string ref, obj_t T> using obj = ctom::ref_impl<key_impl<ref>, node_impl<T>>;
-};
-
-namespace ind {
-  template<size_t ind, typename T> using val = ctom::ref_impl<ind_impl<ind>, node_impl<ctom::val_impl<T>>>;
-  template<size_t ind, arr_t T> using arr = ctom::ref_impl<ind_impl<ind>, node_impl<T>>;
-  template<size_t ind, obj_t T> using obj = ctom::ref_impl<ind_impl<ind>, node_impl<T>>;
-};
-
-//template<size_t S> using ind = ind_impl<S>;
-//template<constexpr_string S> using key = key_impl<S>;
 
 } // End of Namespace
 

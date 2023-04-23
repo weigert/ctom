@@ -1,0 +1,25 @@
+# test
+ # test
+int : 1 #testcomment
+float:
+double:
+bar:
+  # other comment
+  - bar-foo:
+      foo-int: 10
+      foo-float: 2.64
+      foo-double: 2.75
+    bar-char: x
+    int-arr: #test
+      - 9
+      - 7
+      - 5
+  - bar-foo:
+      foo-int: 10
+      foo-float: 5
+      foo-double: 2.5
+    bar-char: y
+    int-arr:
+      - 3
+      - 9
+      - 11

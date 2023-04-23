@@ -57,7 +57,10 @@ some_int = 3
 
 Note that the following examples are **fully-static**, showing only the declarations. They are separated from the implementation for simplicity. For implementations and tying to actual values, as well as serialization, see further below.
 
-##### Simple Object
+#### Examples
+
+<details>
+  <summary>Simple Object</summary>
 
 ```c++
 struct Foo: ctom::obj<
@@ -68,14 +71,15 @@ struct Foo: ctom::obj<
 
 ctom::print<Foo>(); // NOTE: FULLY STATIC! NO INSTANCE!
 ```
-
 ```bash
 val: [foo-int]
 val: [foo-float]
 val: [foo-double]
 ```
+</details>
 
-##### Simple Array
+<details>
+  <summary>Simple Array</summary>
 
 ```c++
 struct Barr: ctom::arr<
@@ -87,15 +91,17 @@ struct Barr: ctom::arr<
 
 ctom::print<Barr>();
 ```
-
 ```bash
 val: [0]
 val: [1]
 val: [2]
 val: [3]
 ```
+</details>
 
-##### Nested Object/Array
+
+<details>
+  <summary>Nested Object/Array</summary>
 
 ```c++
 struct Bar: ctom::obj<
@@ -111,7 +117,6 @@ struct Baz: ctom::obj<
 
 ctom::print<Baz>();
 ```
-
 ```bash
 obj: [baz-bar]
   obj: [bar-foo]
@@ -126,8 +131,10 @@ obj: [baz-bar]
     val: [3]
 val: [baz-bool]
 ```
+</details>
 
-##### Nested Array/Object
+<details>
+  <summary>Nested Array/Object</summary>
 
 ```c++
 struct Maz: ctom::obj<
@@ -163,8 +170,10 @@ arr: [1]
   obj: [2]
     val: [maz-char]
 ```
+</details>
 
-##### Extended Object
+<details>
+  <summary>Extended Object</summary>
 
 ```c++
 struct FooExt: Foo::ext<
@@ -174,7 +183,6 @@ struct FooExt: Foo::ext<
 
 ctom::print<FooExt>();
 ```
-
 ```bash
 val: [foo-int]
 val: [foo-float]
@@ -185,8 +193,10 @@ obj: [foo-ext-foo]
   val: [foo-float]
   val: [foo-double]
 ```
+</details>
 
-##### Extended Array
+<details>
+  <summary>Extended Array</summary>
 
 ```c++
 struct MarrExt: Marr::ext<
@@ -197,7 +207,6 @@ struct MarrExt: Marr::ext<
 
 ctom::print<MarrExt>();
 ```
-
 ```bash
 obj: [0]
   val: [maz-char]
@@ -212,6 +221,7 @@ obj: [4]
 obj: [5]
   val: [maz-char]
 ```
+</details>
 
 ### Run-Time Object-Model Implementations
 
@@ -219,7 +229,10 @@ obj: [5]
 
 You can also combine the declaration and the implementation directly.
 
-##### Simple Object
+#### Examples
+
+<details>
+  <summary>Simple Object</summary>
 
 ```c++
 struct Foo_Impl: Foo {
@@ -235,7 +248,6 @@ foo_impl.get<"foo-float">() = 0.25f;
 
 ctom::print(foo_impl);
 ```
-
 ```bash
 val: "foo-int" = 1
 val: "foo-float" = 0.5
@@ -244,8 +256,10 @@ val: "foo-int" = 2
 val: "foo-float" = 0.25
 val: "foo-double" = 
 ```
+</details>
 
-##### Simple Array
+<details>
+  <summary>Simple Array</summary>
 
 ```c++
 struct Barr_Impl: Barr {
@@ -267,7 +281,6 @@ Barr_Impl new_barr_impl;    // instances are properly separated!
 ctom::print(barr_impl);
 ctom::print(new_barr_impl);
 ```
-
 ```bash
 val: [0] = 0
 val: [1] = 1
@@ -282,8 +295,10 @@ val: [1] = 1
 val: [2] = 2
 val: [3] = 3
 ```
+</details>
 
-##### Nested Object/Array
+<details>
+  <summary>Nested Object/Array</summary>
 
 ```c++
 struct Bar_Impl: Bar {
@@ -299,7 +314,6 @@ struct Baz_Impl: Baz {
 
 ctom::print(baz_impl);
 ```
-
 ```c++
 obj: "baz-bar" = 
   obj: "bar-foo" = 
@@ -315,8 +329,10 @@ obj: "baz-bar" =
   ]
 val: "baz-bool" = 1
 ```
+</details>
 
-##### Nested Array/Object
+<details>
+  <summary>Nested Array/Object</summary>
 
 ```c++
 struct Maz_Impl: Maz {
@@ -352,7 +368,6 @@ marrarr_impl.get<1>().get<2>().get<"maz-char">() = 'l';
 
 ctom::print(marrarr_impl);
 ```
-
 ```bash
 arr: [0] = [
   obj: [0] = 
@@ -387,10 +402,13 @@ arr: [1] = [
     val: "maz-char" = l
 ]
 ```
+</details>
 
 ### Stream-Serialization
 
 Different serialization formats have stream-modifiers, which allow you to pass an object-model instance directly to the stream.
+
+Note that parsing of serialized data is simplified in this library, because of the declarative object-model. Instead of infering structure from the data, structure is known and the data is expected to match.
 
 #### yaml
 
@@ -430,6 +448,8 @@ std::cout << ctom::json::emit << foo_impl;
 - the various serialization formats / namespace should implement static iterators to validate the object-models (e.g.: valid json keys, valid yaml keys)
 - swap some concepts with static assertions, for more helpful error messages
 - moving and assignment into array and stl containers would be very convenient and ease development using `ctom`.
+
+- handling of different quote types, scalar types
 
 ### other thoughts
 

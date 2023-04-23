@@ -2,6 +2,8 @@
 #include "../../src/yaml.hpp"
 #include "../../src/json.hpp"
 
+#include <fstream>
+
 int main( int argc, char* args[] ) {
 
 	// Abstract Object Models
@@ -36,7 +38,7 @@ int main( int argc, char* args[] ) {
 		Arr_Impl(){
 			Arr::val<0>(arr[0]) = 9;
 			Arr::val<1>(arr[1]) = 7;
-			Arr::val<2>(arr[2]) = 5;
+			Arr::val<2>(arr[2]) = 5;			
 		}
 	};
 
@@ -64,7 +66,7 @@ int main( int argc, char* args[] ) {
 
 	struct BarArr_Impl: BarArr {
 		Bar_Impl b[2];
-		BarArr_Impl(){
+		BarArr_Impl(){	
 			BarArr::obj<0>(b[0]);
 			BarArr::obj<1>(b[1]);
 		}
@@ -72,16 +74,30 @@ int main( int argc, char* args[] ) {
 
 	struct Root_Impl: Root {
 		BarArr_Impl bar;
+		int x;
 		Root_Impl(){
 			Root::arr<"bar">(bar);
+			Root::val<"int">(x) = 6;
 		}
 	};
 
 	// Single Instantiation
 
 	Root_Impl root;
-	std::cout<<ctom::yaml::emit<<root;
-	std::cout<<ctom::json::emit<<root;
+
+	std::ifstream yaml_file("config.yaml");
+	if(yaml_file.is_open()){
+	
+		try {
+			yaml_file >> ctom::yaml::parse >> root;
+			std::cout << ctom::yaml::emit << root;
+		} catch(ctom::yaml::exception e){
+			std::cout<<"Failed to parse config.yaml: "<<e.what()<<std::endl;
+		}
+
+		yaml_file.close();
+
+	}
 
 	return 0;
 
