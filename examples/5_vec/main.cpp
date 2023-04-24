@@ -13,10 +13,8 @@ struct vec3 {
 	T z;
 };
 
-// CTOM Interface
-// 	Makes this type parseable however you like
-//	...make sure to implement your copy and move constructors
-// 	unlike me
+// Owning Derived-Class Interface
+// 	Owns the data!
 
 template<typename T>
 struct vec3_t: vec3<T>, ctom::arr<3, T>{
@@ -26,33 +24,28 @@ struct vec3_t: vec3<T>, ctom::arr<3, T>{
 	using vec3<T>::z;
 };
 
+// Forwarding Only Interface
+
+template<typename T>
+struct vec3_forward: ctom::arr<3, T>{
+	vec3_forward(vec3<T>& vec)
+	:ctom::arr<3, T>(vec.x, vec.y, vec.z){};
+};
+
 int main( int argc, char* args[] ) {
 
-	// Object Containing Different Vector-Types
+	std::ifstream yaml_file;
 
-	using Maz_t = ctom::obj<
-		ctom::key<"vecA", vec3_t<int>>,
-		ctom::key<"vecB", vec3_t<float>>,
-		ctom::key<"vecC", vec3_t<double>>
-	>;
+	// Owning, Nested Derived Type
 
-	// Implementation and Compound-Assignment to Keys
+	vec3_t<vec3_t<int>> owning_vec;
 
-	struct Maz: Maz_t {
-		Maz():Maz_t(a, b, c){};
-		vec3_t<int> a;
-		vec3_t<float> b;
-		vec3_t<double> c;
-	} maz;
-
-	// Parse and Emit
-
-	std::ifstream yaml_file("config.yaml");
+	yaml_file.open("config.yaml");
 	if(yaml_file.is_open()){
 	
 		try {
-			yaml_file >> ctom::yaml::parse >> maz;
-			std::cout << ctom::yaml::emit << maz;
+			yaml_file >> ctom::yaml::parse >> owning_vec;
+			std::cout << ctom::yaml::emit << owning_vec;
 		} catch(ctom::yaml::exception e){
 			std::cout<<"Failed to parse config.yaml: "<<e.what()<<std::endl;
 		}
@@ -61,16 +54,19 @@ int main( int argc, char* args[] ) {
 
 	}
 
-	// Vector of Vector? Why of course!
+	// Non-Owning Reference Parser
+	//	Note: Won't work with nested vecs,
+	// 	because the nested vec-type won't be parsable
 
-	vec3_t<vec3_t<int>> vec_of_vec;
+	vec3<float> vec;
+	vec3_forward ref(vec);
 
 	yaml_file.open("config2.yaml");
 	if(yaml_file.is_open()){
 	
 		try {
-			yaml_file >> ctom::yaml::parse >> vec_of_vec;
-			std::cout << ctom::yaml::emit << vec_of_vec;
+			yaml_file >> ctom::yaml::parse >> ref;
+			std::cout << ctom::yaml::emit << ref;
 		} catch(ctom::yaml::exception e){
 			std::cout<<"Failed to parse config.yaml: "<<e.what()<<std::endl;
 		}
@@ -78,6 +74,7 @@ int main( int argc, char* args[] ) {
 		yaml_file.close();
 
 	}
+
 
 	return 0;
 
