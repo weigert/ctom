@@ -421,6 +421,42 @@ struct arr_impl: arr_base {
       (f.template operator()(ref), ...);
     }, nodes);
   }
+
+  // Special Constructors
+
+  arr_impl(){}
+
+  template<size_t N, typename T>
+  void assign_node(T& t){
+    std::get<N>(nodes).node = t;
+  }
+
+  template<size_t N = 0, typename T, typename... Ts>
+  void assign_node(T& t, Ts&... ts){
+    std::get<N>(nodes).node = t;
+    assign_node<N+1>(ts...);
+  }
+
+  template<typename T>
+  arr_impl(T& t){
+    assign_node<0>(t);
+  }
+
+  template<typename... Ts>
+  arr_impl(Ts&... ts){
+    static_assert(sizeof...(Ts) <= size, "too many arguments");
+    assign_node<0>(ts...);
+  }
+
+  template<typename T, size_t N>
+  arr_impl(T(&t)[N]){
+    static_assert(N <= size, "array-size mismatch");
+    size_t n = 0;
+    for_refs([&t, &n](auto&& ref){
+      ref.node = t[n++];
+    });
+  }
+
 };
 
 // Object
@@ -475,6 +511,32 @@ struct obj_impl: obj_base {
     std::apply([&](auto&&... ref){
       (f.template operator()(ref), ...);
     }, nodes);
+  }
+
+  // Special Constructors
+
+  obj_impl(){}
+
+  template<size_t N, typename T>
+  void assign_node(T& t){
+    std::get<N>(nodes).node = t;
+  }
+
+  template<size_t N = 0, typename T, typename... Ts>
+  void assign_node(T& t, Ts&... ts){
+    std::get<N>(nodes).node = t;
+    assign_node<N+1>(ts...);
+  }
+
+  template<typename T>
+  obj_impl(T& t){
+    assign_node<0>(t);
+  }
+
+  template<typename... Ts>
+  obj_impl(Ts&... ts){
+    static_assert(sizeof...(Ts) <= size, "too many arguments");
+    assign_node<0>(ts...);
   }
 };
 

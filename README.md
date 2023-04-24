@@ -472,11 +472,18 @@ std::cout << ctom::json::emit << foo_impl;
 
 ### todo
 
-- the various serialization formats / namespace should implement static iterators to validate the object-models (e.g.: valid json keys, valid yaml keys)
-- swap some concepts with static assertions, for more helpful error messages
-- moving and assignment into array and stl containers would be very convenient and ease development using `ctom`.
-
-- handling of different quote types, scalar types
+- Serialization
+  - Implement Basic JSON Parser
+  - Allow out-of-order member parsing for objects (if possible)
+  - Handle more quote types
+  - Marshal scalars better (quoted / unquoted, NULL values)
+- Compile-Time Checking
+  - Replace some direct concepts with static-asserts for more helpful error messages
+  - Static assert valid json keys, valid yaml keys, etc.
+- Assignment
+  - Assignment to / from STL containers and array-types for ease-of-use
+  - Define full set of allowed value-types
+- Reduce the code-size wherever possible within reason!
 
 ### other thoughts
 
