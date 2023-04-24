@@ -19,9 +19,11 @@ struct vec3 {
 // 	unlike me
 
 template<typename T>
-struct vec3_t: ctom::arr<3, T>{
-	vec3_t():ctom::arr<3, T>(vec.x, vec.y, vec.z){};
-	vec3<T> vec;
+struct vec3_t: vec3<T>, ctom::arr<3, T>{
+	vec3_t():ctom::arr<3, T>(x, y, z){};
+	using vec3<T>::x;
+	using vec3<T>::y;
+	using vec3<T>::z;
 };
 
 int main( int argc, char* args[] ) {
