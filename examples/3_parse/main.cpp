@@ -28,7 +28,8 @@ int main( int argc, char* args[] ) {
 		ctom::key<"int", int>,
 		ctom::key<"float", float>,
 		ctom::key<"double", double>,
-		ctom::key<"bar", BarArr>
+		ctom::key<"bar", BarArr>,
+		ctom::key<"text", std::string>
 	>;
 
 	// Concrete Implementations
@@ -75,11 +76,13 @@ int main( int argc, char* args[] ) {
 	struct Root_Impl: Root {
 		BarArr_Impl bar;
 		int x = 6;
+		std::string text;
 		Root_Impl(){
 			this->val<"bar">() = bar;
 			this->val<"int">() = bar.b[0].foo.a;	// reference variables
 			this->val<"float">() = bar.b[1].foo.b;
 			this->val<"double">() = bar.b[0].foo.c;
+			this->val<"text">() = text;
 		}
 	};
 

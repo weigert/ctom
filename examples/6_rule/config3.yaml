@@ -1,0 +1,5 @@
+some_vec:
+  - 7.8
+  - 8.9
+  - 9.01
+some_text: "test test"

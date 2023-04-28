@@ -65,23 +65,13 @@ struct set {
 // Output Stream and Forwarding Operator
 
 struct ostream {
-    ostream(std::ostream& os):os(os){}
+    explicit ostream(std::ostream& os):os(os){}
     std::ostream& os;
 };
 
 struct ostream_t{} emit;
 ostream operator<<(std::ostream& os, ostream_t&) {
     return ostream(os);
-}
-
-template<typename T>
-ostream operator<<(ostream const& q, const T& t) {
-    q.os << t;
-    return q;
-}
-
-ostream operator<<(ostream const& os, indent& i) {
-    return os << i.to_string();
 }
 
 /*
@@ -92,19 +82,10 @@ ostream operator<<(ostream const& os, indent& i) {
 
 // Node-Type Entrypoints
 
-template<val_t T>
-ostream operator<<(ostream const& os, T& t){
-    return os << set{{}, NULL, &t};
-}
-
-template<arr_t T>
-ostream operator<<(ostream const& os, T& t){
-    return os << set{{}, NULL, &t};
-}
-
-template<obj_t T>
-ostream operator<<(ostream const& os, T& t){
-    return os << set{{}, NULL, &t};
+template<typename T>
+ostream operator<<(ostream const& os, T& type){
+    typename rule<T>::type ref(type);
+    return os << set{{}, NULL, &ref};
 }
 
 // Marshal Implementation
@@ -112,16 +93,17 @@ ostream operator<<(ostream const& os, T& t){
 template<val_t T>
 ostream operator<<(ostream const& os, set<T> s){
 
-    os<<s.ind;
+    os.os << s.ind.to_string();
 
     if(s.key != NULL)
-        os<<s.key<<": ";
+        os.os << s.key << ": ";
     
     if(s.t != NULL) 
-        os<<*s.t->value;
-    else os<<"null";
+        os.os << *(s.t->value);
+    else os.os << "null";
     
-    return os << "\n";
+    os.os << "\n";
+    return os;
 
 }
 
@@ -130,9 +112,9 @@ ostream operator<<(ostream const& os, set<T> s){
 
     if(s.key != NULL){
 
-        os<<s.ind<<s.key<<":";
-        if(s.t == NULL) os<<" null";
-        os<<"\n";
+        os.os << s.ind.to_string() << s.key << ":";
+        if(s.t == NULL) os.os << " null";
+        os.os << "\n";
 
         for(auto& st: s.ind.state)
             st = TAB;
@@ -154,9 +136,9 @@ ostream operator<<(ostream const& os, set<T> s){
 
     if(s.key != NULL){
 
-        os<<s.ind<<s.key<<":";
-        if(s.t == NULL) os<<" null";
-        os<<"\n";
+        os.os << s.ind.to_string() << s.key << ":";
+        if(s.t == NULL) os.os << " null";
+        os.os << "\n";
 
         for(auto& st: s.ind.state)
             st = TAB;
@@ -334,21 +316,26 @@ std::string_view get_val(std::string_view line){
     return val;
 }
 
+
+
+
+/*
+    The goal now is to use the parse-rules to
+    deduce the correct forwarding / interpreting type!
+*/
+
+
+
+
+
+
+
 // Node-Type Entrypoints
 
-template<istream_t S, val_t T>
+template<istream_t S, typename T>
 void operator>>(S stream, T& type){
-    stream >> set{{}, NULL, &type};
-}
-
-template<istream_t S, arr_t T>
-void operator>>(S stream, T& type){
-    stream >> set{{}, NULL, &type};
-}
-
-template<istream_t S, obj_t T>
-void operator>>(S stream, T& type){
-    stream >> set{{}, NULL, &type};
+    typename rule<T>::type ref(type);
+    stream >> set{{}, NULL, &ref};
 }
 
 template<istream_t S, val_t T>

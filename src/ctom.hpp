@@ -1,17 +1,19 @@
 #ifndef CTOM
 #define CTOM
 
-#include <iostream>
-#include <type_traits>
+#include <cstddef>
 #include <tuple>
+#include <type_traits>
 #include <string>
+#include <iostream>
 
 namespace ctom {
 
 /*
 ================================================================================
-                        Node-Types and Implementations
+                        Node and Node-Type Declarations
 ================================================================================
+These are the base-concepts through which we constrain the object models.
 */
 
 struct node_base{};
@@ -23,42 +25,13 @@ template<typename T> concept node_t = std::derived_from<T, ctom::node_base>;
 template<typename T> concept val_t = std::derived_from<T, ctom::val_base>;
 template<typename T> concept arr_t = std::derived_from<T, ctom::arr_base>;
 template<typename T> concept obj_t = std::derived_from<T, ctom::obj_base>;
-
-template<typename T>
-struct node_impl;
-
-// Static Check
-
-template<node_t NA, node_t NB>
-struct is_derived_node {
-  static constexpr bool value = false;
-};
-
-template <
-  template<typename> typename NA, val_t VA,
-  template<typename> typename NB, val_t VB
-> struct is_derived_node<NA<VA>, NB<VB>>{
-  static constexpr bool value = std::is_base_of<VB, VA>::value;
-};
-
-template <
-  template<typename> typename NA, arr_t VA,
-  template<typename> typename NB, arr_t VB
-> struct is_derived_node<NA<VA>, NB<VB>>{
-  static constexpr bool value = std::is_base_of<VB, VA>::value;
-};
-
-template <
-  template<typename> typename NA, obj_t VA,
-  template<typename> typename NB, obj_t VB
-> struct is_derived_node<NA<VA>, NB<VB>>{
-  static constexpr bool value = std::is_base_of<VB, VA>::value;
-};
+template<typename T> concept impl_t = val_t<T>|| arr_t<T> || obj_t<T>;
 
 /*
 ================================================================================
                           constexpr_string helper
 ================================================================================
+This allows us to use string literals as template parameters.
 */
 
 template<size_t N> struct constexpr_string {
@@ -88,8 +61,10 @@ template<size_t N> constexpr_string(char const (&)[N]) -> constexpr_string<N-1>;
 
 /*
 ================================================================================
-                      Key, Index and Reference Types
+                  Key, Index and Reference Type Implementations
 ================================================================================
+These are types which are used to index tuples, by using refs to tie
+key and index to node types.
 */
 
 struct ind_base{};
@@ -98,15 +73,11 @@ struct ref_base{};
 
 template<typename T> concept ind_t = std::derived_from<T, ctom::ind_base>;
 template<typename T> concept key_t = std::derived_from<T, ctom::key_base>;
-template<typename T> concept ref_t = std::derived_from<T, ctom::ref_base>;
-template<typename T> concept ind_key_t = ind_t<T> || key_t<T>;
+template<typename T> concept ind_key_t = ctom::ind_t<T> || ctom::key_t<T>;
 
-template<ind_key_t T, node_t N>
-struct ref_impl: ref_base {
-  static constexpr auto key = T::val;
-  static constexpr auto ind = T::val;
-  N node;
-};
+template<typename T> concept ref_t = std::derived_from<T, ctom::ref_base>;
+template<typename T> concept ind_ref_t = ctom::ref_t<T> && T::is_ind;
+template<typename T> concept key_ref_t = ctom::ref_t<T> && T::is_key;
 
 template<size_t S>
 struct ind_impl: ind_base {
@@ -118,67 +89,69 @@ struct key_impl: key_base {
   static constexpr auto val = S;
 };
 
-// Specific Reference-SubType
-
-template<typename T> struct is_ind_ref {
-  static constexpr bool value = false;
+template<ind_key_t T, node_t Node>
+struct ref_impl: ref_base {
+  static constexpr auto key = T::val;
+  static constexpr auto ind = T::val;
+  static constexpr bool is_ind = ctom::ind_t<T>;
+  static constexpr bool is_key = ctom::key_t<T>;
+  Node node;
 };
 
-template<template<typename, typename>typename R, ind_t I, node_t N>
-struct is_ind_ref<R<I, N>>{
-  static constexpr bool value = true;
+/*
+================================================================================
+                Node Implementations and Interpretation Rules
+================================================================================
+The node implementation is templated by a base-model implementation, storing
+a pointer to it so we can also have derived types.
+
+If the type assigned to a node is unknown / not an implementation base-type,
+we find out which the intended interpretation type is using an interpret rule.
+*/
+
+// Node-Type Forward Declarations
+
+template<typename T> struct val_impl;
+template<ind_ref_t... T> struct arr_impl;
+template<key_ref_t... T> struct obj_impl;
+
+// Templated Interpretation Rules
+
+template<typename T>
+struct rule {
+  typedef val_impl<T> type;
 };
 
-template<typename T> concept ind_ref_t = ref_t<T> && is_ind_ref<T>::value;
-
-template<typename T> struct is_key_ref {
-  static constexpr bool value = false;
+template<arr_t T>
+struct rule<T>{
+  typedef T type;
 };
 
-template<template<typename, typename>typename R, key_t I, node_t N>
-struct is_key_ref<R<I, N>>{
-  static constexpr bool value = true;
+template<obj_t T>
+struct rule<T> {
+  typedef T type;
 };
 
-template<typename T> concept key_ref_t = ref_t<T> && is_key_ref<T>::value;
+// 
+
+template<impl_t T>
+struct node_impl: node_base {
+  static constexpr auto type = T::type;
+  T* impl = NULL;
+
+  template<typename V>
+  void operator=(V& v){
+    if(impl == NULL)
+      impl = new typename rule<V>::type(v);
+    *impl = v;
+  }
+};
 
 /*
 ================================================================================
                 Implementation Forward Declarations and Aliases
 ================================================================================
 */
-
-// Node-Implementation Forward Declarations
-
-template<typename T> struct val_impl;
-template<ind_ref_t... T> struct arr_impl;
-template<key_ref_t... T> struct obj_impl;
-
-template<typename T>
-struct node_impl: node_base {
-  static constexpr auto type = T::type;
-
-  T* impl = NULL;
-
-  template<typename V>
-  void operator=(V& v){
-    if(impl == NULL){
-      impl = new val_impl<V>(v);
-    }
-    *impl = v;
-  }
-
-  template<arr_t V>
-  void operator=(V& t){
-    impl = &t;
-  }
-
-  template<obj_t V>
-  void operator=(V& t){
-    impl = &t;
-  }
-
-};
 
 // Key and Index Aliases
 
@@ -191,24 +164,9 @@ template<typename T> concept key_alias_t = std::derived_from<T, ctom::key_alias_
 // Key-Based Aliases
 
 template<constexpr_string ref, typename T> 
-struct key_alias;
-
-template<constexpr_string ref, typename T> 
 struct key_alias: key_alias_base {
   typedef key_impl<ref> key_t;
-  typedef node_impl<val_impl<T>> node_t;
-};
-
-template<constexpr_string ref, arr_t T> 
-struct key_alias<ref, T>: key_alias_base {
-  typedef key_impl<ref> key_t;
-  typedef node_impl<T> node_t;
-};
-
-template<constexpr_string ref, obj_t T> 
-struct key_alias<ref, T>: key_alias_base {
-  typedef key_impl<ref> key_t;
-  typedef node_impl<T> node_t;
+  typedef node_impl<typename rule<T>::type> node_t;
 };
 
 // Full Key-Alias Resolution
@@ -222,24 +180,9 @@ using obj = obj_impl<ctom::ref_impl<typename keys::key_t, typename keys::node_t>
 // Ind-Based Aliases
 
 template<size_t N, typename T>
-struct ind_alias;
-
-template<size_t N, typename T>
 struct ind_alias: ind_alias_base {
   typedef ind_impl<N> ind_t;
-  typedef node_impl<val_impl<T>> node_t;
-};
-
-template<size_t N, arr_t T>
-struct ind_alias<N, T>: ind_alias_base {
-  typedef ind_impl<N> ind_t;
-  typedef node_impl<T> node_t;
-};
-
-template<size_t N, obj_t T>
-struct ind_alias<N, T>: ind_alias_base {
-  typedef ind_impl<N> ind_t;
-  typedef node_impl<T> node_t;
+  typedef node_impl<typename rule<T>::type> node_t;
 };
 
 // Full Ind-Alias Resolution
@@ -374,13 +317,40 @@ struct val_impl: val_base {
 
 // Array
 
-template<ind_ref_t... refs>
-struct arr_impl: arr_base {
+template<ref_t... refs>
+struct container_base {
 
-  static_assert(is_ref_unique<refs...>::value, "indices for arr are not unique");
+  static_assert(is_ref_unique<refs...>::value, "references are not unique");
 
   std::tuple<refs...> nodes;
-  static constexpr size_t size = std::tuple_size<std::tuple<refs...>>::value;
+  static constexpr size_t size = std::tuple_size<decltype(nodes)>::value;
+
+  // Static and Non-Static Iteration
+
+  struct for_type {
+    template<typename F>
+    static constexpr void iter(F&& f){
+      (f.template operator()<refs>(), ...);
+    }
+  };
+
+  template<typename F>
+  void for_refs(F&& f){
+    std::apply([&](auto&&... ref){
+      (f.template operator()(ref), ...);
+    }, nodes);
+  }
+
+
+};
+
+template<ind_ref_t... refs>
+struct arr_impl: arr_base, container_base<refs...> {
+
+  using container_base<refs...>::size;
+  using container_base<refs...>::nodes;
+  using container_base<refs...>::for_type;
+  using container_base<refs...>::for_refs;
 
   template <size_t N, typename T>
   using ext = std::decay_t<decltype(ind_seq<T, N + size>())>;
@@ -404,22 +374,6 @@ struct arr_impl: arr_base {
   auto& val(){
     auto& ref = get<ind_impl<_ind>>();
     return ref.node;
-  }
-
-  // Static and Non-Static Iteration
-
-  struct for_type {
-    template<typename F>
-    static constexpr void iter(F&& f){
-      (f.template operator()<refs>(), ...);
-    }
-  };
-
-  template<typename F>
-  void for_refs(F&& f){
-    std::apply([&](auto&&... ref){
-      (f.template operator()(ref), ...);
-    }, nodes);
   }
 
   // Special Constructors
@@ -462,13 +416,12 @@ struct arr_impl: arr_base {
 // Object
 
 template<key_ref_t... refs>
-struct obj_impl: obj_base {
+struct obj_impl: obj_base, container_base<refs...> {
 
-  static_assert(is_ref_unique<refs...>::value, "keys for obj are not unique");
-
-  std::tuple<refs...> nodes;
-  static constexpr size_t size = std::tuple_size<std::tuple<refs...>>::value;
-
+  using container_base<refs...>::size;
+  using container_base<refs...>::nodes;
+  using container_base<refs...>::for_type;
+  using container_base<refs...>::for_refs;
   // Extension
 
   template<key_alias_t... srefs>
@@ -495,22 +448,6 @@ struct obj_impl: obj_base {
   auto& val(){
     auto& ref = get<key_impl<_key>>();
     return ref.node;
-  }
-
-  // Static and Non-Static Iteration
-
-  struct for_type {
-    template<typename F>
-    static constexpr void iter(F&& f){
-      (f.template operator()<refs>(), ...);
-    }
-  };
-
-  template<typename F>
-  void for_refs(F&& f){
-    std::apply([&](auto&&... ref){
-      (f.template operator()(ref), ...);
-    }, nodes);
   }
 
   // Special Constructors
@@ -545,6 +482,8 @@ struct obj_impl: obj_base {
                           Marshalling / Unmarshalling
 ================================================================================
 */
+
+
 
 template<typename T>
 struct printer {
@@ -650,7 +589,7 @@ void print(T& arr, std::string prefix){
         ctom::print(*ref.node.impl, prefix+"  ");
       std::cout<<prefix;
       std::cout<<"]\n";
-    } 
+    }
 
     if(ref.node.type == "obj"){
       std::cout<<prefix;
@@ -690,7 +629,7 @@ void print(T& obj, std::string prefix){
         ctom::print(*ref.node.impl, prefix+"  ");
       std::cout<<prefix;
       std::cout<<"]\n";
-    } 
+    }
 
     if(ref.node.type == "obj"){
       std::cout<<prefix;
@@ -704,6 +643,7 @@ void print(T& obj, std::string prefix){
   });
 
 }
+
 
 } // End of Namespace
 
