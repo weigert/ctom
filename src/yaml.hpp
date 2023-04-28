@@ -2,19 +2,32 @@
 #define CTOM_YAML
 
 #include "ctom.hpp"
+
 #include <string>
-#include <iostream>
-#include <vector>
 #include <string_view>
+#include <vector>
 #include <charconv>
-#include <fstream>
 
 namespace ctom {
 namespace yaml {
 
+struct ostream_yaml: ctom::ostream_base{} static emit;
+struct istream_yaml: ctom::istream_base{} static parse;
+
+using ostream = ctom::ostream<ostream_yaml>;
+using istream = ctom::istream<istream_yaml>;
+
+ostream operator<<(std::ostream& os, ostream_yaml&) {
+    return ostream(os);
+}
+
+istream operator>>(std::istream& is, istream_yaml&) {
+    return istream(is);
+}
+
 /*
 ================================================================================
-                        YAML Emit/Parse Co-State
+                            YAML Model Co-State
 ================================================================================
 */
 
@@ -56,22 +69,16 @@ struct set {
     T* t;
 };
 
-/*
-================================================================================
-                        YAML Marshal Stream Operators
-================================================================================
-*/
+template<typename T>
+ostream operator<<(ostream const& os, T& type){
+    typename rule<T>::type ref(type);
+    return os << set{{}, NULL, &ref};
+}
 
-// Output Stream and Forwarding Operator
-
-struct ostream {
-    explicit ostream(std::ostream& os):os(os){}
-    std::ostream& os;
-};
-
-struct ostream_t{} emit;
-ostream operator<<(std::ostream& os, ostream_t&) {
-    return ostream(os);
+template<typename T>
+void operator>>(istream is, T& type){
+    typename rule<T>::type ref(type);
+    is >> set{{}, NULL, &ref};
 }
 
 /*
@@ -79,14 +86,6 @@ ostream operator<<(std::ostream& os, ostream_t&) {
                         YAML Marshal Implementation
 ================================================================================
 */
-
-// Node-Type Entrypoints
-
-template<typename T>
-ostream operator<<(ostream const& os, T& type){
-    typename rule<T>::type ref(type);
-    return os << set{{}, NULL, &ref};
-}
 
 // Marshal Implementation
 
@@ -158,73 +157,6 @@ ostream operator<<(ostream const& os, set<T> s){
 
 /*
 ================================================================================
-                        YAML Unmarshal Stream Operators
-================================================================================
-*/
-
-// Input Stream and Forwarding Operator
-
-struct istream_base{};
-struct istream_fwd{} parse;
-
-template<typename T>
-concept istream_t = std::derived_from<T, ctom::yaml::istream_base>;
-
-// fstream reader
-
-struct ifstream: istream_base {
-    ifstream(std::ifstream& ifs):ifs(ifs){}
-    std::ifstream& ifs;
-    std::string cur;
-    size_t line = 0;
-};
-
-ifstream operator>>(std::ifstream& ifs, istream_fwd&) {
-    return ifstream(ifs);
-}
-
-// string_view reader
-
-/*
-
-std::string_view get_line(istream<std::string_view>& is){
-    auto end = is.input.find("\n");
-    auto line = is.input.substr(0, end);
-    is.input.remove_prefix(line.size());
-    if(end != std::string_view::npos){
-        is.input.remove_prefix(1);
-    }
-    is.line++;
-    return line;
-}
-
-*/
-
-
-
-// Exception Handling
-
-struct parse_exception: public std::exception {
-    std::string msg;
-    explicit parse_exception(std::string _msg):msg{_msg}{};
-    const char* what() const noexcept override {
-        return msg.c_str();
-    }
-};
-
-struct exception: public std::exception {
-    std::string msg;
-    size_t line = 0;
-    explicit exception(size_t line, std::string _msg){
-        msg = "line ("+std::to_string(line)+"): "+_msg;
-    };
-    const char* what() const noexcept override {
-        return msg.c_str();
-    }
-};
-
-/*
-================================================================================
                         YAML Unmarshal Implementation
 ================================================================================
 */
@@ -282,10 +214,10 @@ void parse_val<std::string>(std::string& t, std::string_view v){
 
 // Stream Base-Operations
 
-std::string_view get_line(ifstream& ifs){
-    while(!ifs.ifs.eof()){
+std::string_view get_line(istream& ifs){
+    while(!ifs.is.eof()){
 
-        std::getline(ifs.ifs, ifs.cur);
+        std::getline(ifs.is, ifs.cur);
         ifs.line++;
 
         auto view = pre_delim(ifs.cur, "#");
@@ -316,30 +248,8 @@ std::string_view get_val(std::string_view line){
     return val;
 }
 
-
-
-
-/*
-    The goal now is to use the parse-rules to
-    deduce the correct forwarding / interpreting type!
-*/
-
-
-
-
-
-
-
-// Node-Type Entrypoints
-
-template<istream_t S, typename T>
-void operator>>(S stream, T& type){
-    typename rule<T>::type ref(type);
-    stream >> set{{}, NULL, &ref};
-}
-
-template<istream_t S, val_t T>
-void operator>>(S& stream, set<T> s){
+template<val_t T>
+void operator>>(istream& stream, set<T> s){
 
     // Extract Line (w. Shift Pointer)
 
@@ -357,7 +267,6 @@ void operator>>(S& stream, set<T> s){
 
     auto key = get_key(line);
     auto val = get_val(line);
-    //std::cout<<s.ind<<key<<val<<"\n";
 
     if(s.key == NULL && key != "")
         throw exception(stream.line, std::string("invalid key: want null, have \"") + std::string(key) + "\n");
@@ -376,8 +285,8 @@ void operator>>(S& stream, set<T> s){
 
 }
 
-template<istream_t S, arr_t T>
-void operator>>(S& stream, set<T> s){
+template<arr_t T>
+void operator>>(istream& stream, set<T> s){
 
     if(s.key != NULL){
 
@@ -397,7 +306,6 @@ void operator>>(S& stream, set<T> s){
 
         auto key = get_key(line);
         auto val = get_val(line);
-       // std::cout<<s.ind<<key<<val<<std::endl;
 
         // Validate, Parse
 
@@ -424,8 +332,8 @@ void operator>>(S& stream, set<T> s){
 
 }
 
-template<istream_t S, obj_t T>
-void operator>>(S& stream, set<T> s){
+template<obj_t T>
+void operator>>(istream& stream, set<T> s){
 
     // Extract Line (w. Shift Pointer)
 
@@ -445,7 +353,6 @@ void operator>>(S& stream, set<T> s){
 
         auto key = get_key(line);
         auto val = get_val(line);
-     //   std::cout<<s.ind<<key<<val<<std::endl;
 
         // Validate, Parse
 

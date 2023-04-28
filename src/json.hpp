@@ -2,32 +2,34 @@
 #define CTOM_JSON
 
 #include "ctom.hpp"
+
 #include <string>
-#include <iostream>
+#include <string_view>
 #include <vector>
+#include <charconv>
 
 namespace ctom {
 namespace json {
 
-// Stream-Forwarding Operator
+struct ostream_json: ctom::ostream_base{} static emit;
+struct istream_json: ctom::istream_base{} static parse;
 
-struct ostream {
-    ostream(std::ostream& os):os(os){}
-    std::ostream& os;
-};
+using ostream = ctom::ostream<ostream_json>;
+using istream = ctom::istream<istream_json>;
 
-template<typename T>
-ostream operator<<(ostream const& q, T& t) {
-    q.os << t;
-    return q;
-}
-
-// Operator Instance
-
-struct ostream_t{} emit;
-ostream operator<<(std::ostream& os, ostream_t&) {
+ostream operator<<(std::ostream& os, ostream_json&) {
     return ostream(os);
 }
+
+istream operator>>(std::istream& is, istream_json&) {
+    return istream(is);
+}
+
+/*
+================================================================================
+                            JSON Model Co-State
+================================================================================
+*/
 
 // Indentation State
 
@@ -42,19 +44,20 @@ struct indent {
     indent(std::initializer_list<indentstate> s){
         state = s;
     }
+
+    std::string to_string(){
+        std::string str = "";
+        for(auto& s: state){
+            if(s == TAB) str = str+"  ";
+            if(s == DASH) str = str+"- ";
+        }
+        return str;
+    }
 };
 
 indent operator+(indent ind, indentstate state){
     ind.state.push_back(state);
     return ind;
-}
-
-ostream operator<<(ostream const& os, indent& i) {
-    for(auto& s: i.state){
-        if(s == TAB) os << "  ";
-        if(s == DASH) os << "- ";
-    }
-    return os;
 }
 
 // Reference State
@@ -67,43 +70,43 @@ struct set {
     bool last = true;
 };
 
-template<val_t T>
-ostream operator<<(ostream const& os, T& t){
-    return os << set{{}, NULL, &t};
+template<typename T>
+ostream operator<<(ostream const& os, T& type){
+    typename rule<T>::type ref(type);
+    return os << set{{}, NULL, &ref};
 }
 
-template<arr_t T>
-ostream operator<<(ostream const& os, T& t){
-    return os << set{{}, NULL, &t};
-}
-
-template<obj_t T>
-ostream operator<<(ostream const& os, T& t){
-    return os << set{{}, NULL, &t};
-}
-
-// Marshal Implementation
+/*
+================================================================================
+                            JSON Marshal Implementation
+================================================================================
+*/
 
 template<val_t T>
 ostream operator<<(ostream const& os, set<T> s){
-    os<<s.ind;
-    if(s.key != NULL){
-        os<<"\""<<s.key<<"\": ";
-    }
-    if(s.t != NULL) os<<"\""<<*s.t->value<<"\"";
-    else os<<"\"\"";
-    if(!s.last) os<<",";
-    return os << "\n";
+
+    os.os << s.ind.to_string();
+    
+    if(s.key != NULL)
+        os.os << "\"" << s.key << "\": ";
+    
+    if(s.t != NULL) os.os << "\"" << *s.t->value << "\"";
+    else os.os << "\"\"";
+
+    if(!s.last) os.os << ",";
+    os.os << "\n";
+
+    return os;
 }
 
 template<arr_t T>
 ostream operator<<(ostream const& os, set<T> s){
 
-    os<<s.ind;
-    if(s.key != NULL){
-        os<<"\""<<s.key<<"\": ";
-    }
-    os<<"[\n";
+    os.os << s.ind.to_string();
+
+    if(s.key != NULL)
+        os.os << "\"" << s.key << "\": ";
+    os.os << "[\n";
 
     int n = 0;
     s.t->for_refs([&](auto&& ref){
@@ -111,19 +114,20 @@ ostream operator<<(ostream const& os, set<T> s){
         n++;
     });
 
-    os<<s.ind<<"]";
-    if(!s.last) os<<",";
-    return os<<"\n";
+    os.os << s.ind.to_string() << "]";
+    if(!s.last) os.os << ",";
+    os.os << "\n";
+
+    return os;
 }
 
 template<obj_t T>
 ostream operator<<(ostream const& os, set<T> s){
 
-    os<<s.ind;
-    if(s.key != NULL){
-        os<<"\""<<s.key<<"\": ";
-    }
-    os<<"{\n";
+    os.os << s.ind.to_string();
+    if(s.key != NULL)
+        os.os << "\"" << s.key << "\": ";
+    os.os << "{\n";
 
     int n = 0;
     s.t->for_refs([&](auto&& ref){
@@ -131,9 +135,11 @@ ostream operator<<(ostream const& os, set<T> s){
         n++;
     });
 
-    os<<s.ind<<"}";
-    if(!s.last) os<<",";
-    return os<<"\n";
+    os.os << s.ind.to_string() << "}";
+    if(!s.last) os.os << ",";
+    os.os << "\n";
+
+    return os;
 
 }
 

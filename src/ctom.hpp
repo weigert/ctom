@@ -89,12 +89,12 @@ struct key_impl: key_base {
   static constexpr auto val = S;
 };
 
-template<ind_key_t T, node_t Node>
+template<ind_key_t IK, node_t Node>
 struct ref_impl: ref_base {
-  static constexpr auto key = T::val;
-  static constexpr auto ind = T::val;
-  static constexpr bool is_ind = ctom::ind_t<T>;
-  static constexpr bool is_key = ctom::key_t<T>;
+  static constexpr auto key = IK::val;
+  static constexpr auto ind = IK::val;
+  static constexpr bool is_ind = ctom::ind_t<IK>;
+  static constexpr bool is_key = ctom::key_t<IK>;
   Node node;
 };
 
@@ -132,7 +132,7 @@ struct rule<T> {
   typedef T type;
 };
 
-// 
+// Node Implementation w. Assignment Operator
 
 template<impl_t T>
 struct node_impl: node_base {
@@ -151,6 +151,8 @@ struct node_impl: node_base {
 ================================================================================
                 Implementation Forward Declarations and Aliases
 ================================================================================
+Alias structs for easier construction of the complex, specific specialized types.
+
 */
 
 // Key and Index Aliases
@@ -206,8 +208,9 @@ using arr = std::decay_t<decltype(ind_seq<T, N>())>;
 
 /*
 ================================================================================
-                          Helper Constexpr Structs
+                          Compile-Time Helper Values  
 ================================================================================
+These are template-metaprogramming structs which run checks on various types.
 */
 
 // static check if ind_key_t is the key of a ref_t
@@ -293,11 +296,9 @@ struct is_ref_unique<R, Rs...>{
 
 /*
 ================================================================================
-                          Node Member Implementations
+                            Node-Type Implementations
 ================================================================================
 */
-
-// Value
 
 template<typename T>
 struct val_impl: val_base {
@@ -315,10 +316,8 @@ struct val_impl: val_base {
   }
 };
 
-// Array
-
-template<ref_t... refs>
-struct container_base {
+template<ind_ref_t... refs>
+struct arr_impl: arr_base {
 
   static_assert(is_ref_unique<refs...>::value, "references are not unique");
 
@@ -341,21 +340,11 @@ struct container_base {
     }, nodes);
   }
 
-
-};
-
-template<ind_ref_t... refs>
-struct arr_impl: arr_base, container_base<refs...> {
-
-  using container_base<refs...>::size;
-  using container_base<refs...>::nodes;
-  using container_base<refs...>::for_type;
-  using container_base<refs...>::for_refs;
-
   template <size_t N, typename T>
   using ext = std::decay_t<decltype(ind_seq<T, N + size>())>;
 
-  template<ctom::ind_t ind> struct index {
+  template<ctom::ind_key_t ind> struct index {
+    static_assert(ctom::ind_t<ind>, "can't index array with non-index type");
     static constexpr size_t value = ctom::index_refs<0, ind, refs...>::value;
   };
 
@@ -381,25 +370,25 @@ struct arr_impl: arr_base, container_base<refs...> {
   arr_impl(){}
 
   template<size_t N, typename T>
-  void assign_node(T& t){
+  void assign(T& t){
     std::get<N>(nodes).node = t;
   }
 
   template<size_t N = 0, typename T, typename... Ts>
-  void assign_node(T& t, Ts&... ts){
+  void assign(T& t, Ts&... ts){
     std::get<N>(nodes).node = t;
-    assign_node<N+1>(ts...);
+    assign<N+1>(ts...);
   }
 
   template<typename T>
   arr_impl(T& t){
-    assign_node<0>(t);
+    assign<0>(t);
   }
 
   template<typename... Ts>
   arr_impl(Ts&... ts){
     static_assert(sizeof...(Ts) <= size, "too many arguments");
-    assign_node<0>(ts...);
+    assign<0>(ts...);
   }
 
   template<typename T, size_t N>
@@ -410,18 +399,32 @@ struct arr_impl: arr_base, container_base<refs...> {
       ref.node = t[n++];
     });
   }
-
 };
 
-// Object
-
 template<key_ref_t... refs>
-struct obj_impl: obj_base, container_base<refs...> {
+struct obj_impl: obj_base {
 
-  using container_base<refs...>::size;
-  using container_base<refs...>::nodes;
-  using container_base<refs...>::for_type;
-  using container_base<refs...>::for_refs;
+  static_assert(is_ref_unique<refs...>::value, "references are not unique");
+
+  std::tuple<refs...> nodes;
+  static constexpr size_t size = std::tuple_size<decltype(nodes)>::value;
+
+  // Static and Non-Static Iteration
+
+  struct for_type {
+    template<typename F>
+    static constexpr void iter(F&& f){
+      (f.template operator()<refs>(), ...);
+    }
+  };
+
+  template<typename F>
+  void for_refs(F&& f){
+    std::apply([&](auto&&... ref){
+      (f.template operator()(ref), ...);
+    }, nodes);
+  }
+
   // Extension
 
   template<key_alias_t... srefs>
@@ -455,35 +458,82 @@ struct obj_impl: obj_base, container_base<refs...> {
   obj_impl(){}
 
   template<size_t N, typename T>
-  void assign_node(T& t){
+  void assign(T& t){
     std::get<N>(nodes).node = t;
   }
 
   template<size_t N = 0, typename T, typename... Ts>
-  void assign_node(T& t, Ts&... ts){
+  void assign(T& t, Ts&... ts){
     std::get<N>(nodes).node = t;
-    assign_node<N+1>(ts...);
+    assign<N+1>(ts...);
   }
 
   template<typename T>
   obj_impl(T& t){
-    assign_node<0>(t);
+    assign<0>(t);
   }
 
   template<typename... Ts>
   obj_impl(Ts&... ts){
     static_assert(sizeof...(Ts) <= size, "too many arguments");
-    assign_node<0>(ts...);
+    assign<0>(ts...);
   }
 };
 
 /*
 ================================================================================
-                          Marshalling / Unmarshalling
+                        Marshal/Unmarshal Base Types
 ================================================================================
 */
 
+// Exception Handling
 
+struct parse_exception: public std::exception {
+    std::string msg;
+    explicit parse_exception(std::string _msg):msg{_msg}{};
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
+
+struct exception: public std::exception {
+    std::string msg;
+    size_t line = 0;
+    explicit exception(size_t line, std::string _msg){
+        msg = "line ("+std::to_string(line)+"): "+_msg;
+    };
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
+
+// Stream-Types
+
+struct ostream_base{};
+struct istream_base{};
+
+template<typename T> concept ostream_t = std::derived_from<T, ctom::ostream_base>;
+template<typename T> concept istream_t = std::derived_from<T, ctom::istream_base>;
+
+template<ostream_t>
+struct ostream {
+    explicit ostream(std::ostream& os):os(os){}
+    std::ostream& os;
+};
+
+template<istream_t>
+struct istream {
+    explicit istream(std::istream& is):is(is){}
+    std::istream& is;
+    std::string cur;
+    size_t line = 0;
+};
+
+/*
+================================================================================
+                            Compile-Time Marshal
+================================================================================
+*/
 
 template<typename T>
 struct printer {
@@ -551,99 +601,6 @@ template<typename T>
 void print(){
   printer<T>::print();
 }
-
-// Instance-Based Marshalling
-
-template<val_t T>
-void print(T&, std::string prefix = "");
-template<arr_t T>
-void print(T&, std::string prefix = "");
-template<obj_t T>
-void print(T&, std::string prefix = "");
-
-template<val_t T>
-void print(T& val, std::string prefix){
-  std::cout<<*val.value;
-}
-
-template<arr_t T>
-void print(T& arr, std::string prefix){
-
-  arr.for_refs([prefix](auto&& ref){
-
-    if(ref.node.type == "val"){
-      std::cout<<prefix;
-      std::cout<<ref.node.type<<": ";
-      std::cout<<"["<<ref.ind<<"] = ";
-      if(ref.node.impl != NULL)
-        ctom::print(*ref.node.impl, prefix+"  ");
-      std::cout<<"\n";
-    }
-
-    if(ref.node.type == "arr"){
-      std::cout<<prefix;
-      std::cout<<ref.node.type<<": ";
-      std::cout<<"["<<ref.ind<<"] = ";
-      std::cout<<"[\n";
-      if(ref.node.impl != NULL)
-        ctom::print(*ref.node.impl, prefix+"  ");
-      std::cout<<prefix;
-      std::cout<<"]\n";
-    }
-
-    if(ref.node.type == "obj"){
-      std::cout<<prefix;
-      std::cout<<ref.node.type<<": ";
-      std::cout<<"["<<ref.ind<<"] = ";
-      std::cout<<"\n";
-      if(ref.node.impl != NULL)
-        ctom::print(*ref.node.impl, prefix+"  ");
-    }
-
-  });
-
-}
-
-template<obj_t T>
-void print(T& obj, std::string prefix){
-
-  // Iterate over Object References
-  
-  obj.for_refs([prefix](auto&& ref){
-  
-    if(ref.node.type == "val"){
-      std::cout<<prefix;
-      std::cout<<ref.node.type<<": ";
-      std::cout<<"\""<<ref.key<<"\" = ";
-      if(ref.node.impl != NULL)
-        ctom::print(*ref.node.impl, prefix+"  ");
-      std::cout<<"\n";
-    }
-  
-    if(ref.node.type == "arr"){
-      std::cout<<prefix;
-      std::cout<<ref.node.type<<": ";
-      std::cout<<"\""<<ref.key<<"\" = ";
-      std::cout<<"[\n";
-      if(ref.node.impl != NULL)
-        ctom::print(*ref.node.impl, prefix+"  ");
-      std::cout<<prefix;
-      std::cout<<"]\n";
-    }
-
-    if(ref.node.type == "obj"){
-      std::cout<<prefix;
-      std::cout<<ref.node.type<<": ";
-      std::cout<<"\""<<ref.key<<"\" = ";
-      std::cout<<"\n";
-      if(ref.node.impl != NULL)
-        ctom::print(*ref.node.impl, prefix+"  ");
-    }
-
-  });
-
-}
-
 
 } // End of Namespace
 

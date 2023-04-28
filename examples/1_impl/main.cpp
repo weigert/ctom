@@ -1,6 +1,5 @@
 #include "../../src/ctom.hpp"
-#include <vector>
-#include <set>
+#include "../../src/yaml.hpp"
 
 int main( int argc, char* args[] ) {
 
@@ -47,13 +46,13 @@ int main( int argc, char* args[] ) {
 		}
 	} foo_impl;
 
-	ctom::print(foo_impl);
+	std::cout << ctom::yaml::emit << foo_impl;
 
 	foo_impl.get<"foo-int">() = 2;
 	foo_impl.get<"foo-float">() = 0.25f;
 	foo_impl.z = 3;
 
-	ctom::print(foo_impl);
+	std::cout << ctom::yaml::emit << foo_impl;
 
 	// Simple Array Implementation
 
@@ -70,7 +69,7 @@ int main( int argc, char* args[] ) {
 		}
 	} barr_impl;
 
-	ctom::print(barr_impl);
+	std::cout << ctom::yaml::emit << barr_impl;
 
 	barr_impl.a = 3;	// direct assignment
 	barr_impl.b = 2;
@@ -79,8 +78,8 @@ int main( int argc, char* args[] ) {
 
 	Barr_Impl new_barr_impl;
 
-	ctom::print(barr_impl);
-	ctom::print(new_barr_impl);
+	std::cout << ctom::yaml::emit << barr_impl;
+	std::cout << ctom::yaml::emit << new_barr_impl;
 
 	// Nested Objects -> {Objects, Arrays}
 
@@ -104,7 +103,7 @@ int main( int argc, char* args[] ) {
 		}
 	} baz_impl;
 
-	ctom::print(baz_impl);
+	std::cout << ctom::yaml::emit << baz_impl;
 
 	// Nested Arrays -> {Arrays, Objects}
 
@@ -139,7 +138,7 @@ int main( int argc, char* args[] ) {
 	marrarr_impl.marr1.maz1.c = 'e';
 	marrarr_impl.marr1.maz2.c = 'f';
 
-	ctom::print(marrarr_impl);
+	std::cout << ctom::yaml::emit << marrarr_impl;
 
 	marrarr_impl.get<0>().get<0>().get<"maz-char">() = 'g';
 	marrarr_impl.get<0>().get<1>().get<"maz-char">() = 'h';
@@ -148,26 +147,7 @@ int main( int argc, char* args[] ) {
 	marrarr_impl.get<1>().get<1>().get<"maz-char">() = 'k';
 	marrarr_impl.get<1>().get<2>().get<"maz-char">() = 'l';
 
-	ctom::print(marrarr_impl);
-
-	/*
-
-	// Extended Object Implementation
-
-	struct FooExt: Foo::ext<
-		ctom::key::val<"foo-ext-int", int>,
-		ctom::key::obj<"foo-ext-foo", Foo>
-	>{};
-
-	// Extended Array Implementation
-
-	struct MarrExt: Marr::ext<
-		ctom::ind::obj<3, Maz>,
-		ctom::ind::obj<4, Maz>,
-		ctom::ind::obj<5, Maz>
-	>{};
-
-	*/
+	std::cout << ctom::yaml::emit << marrarr_impl;
 
 	return 0;
 

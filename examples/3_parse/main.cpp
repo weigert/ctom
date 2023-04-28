@@ -96,7 +96,7 @@ int main( int argc, char* args[] ) {
 		try {
 			yaml_file >> ctom::yaml::parse >> root;
 			std::cout << ctom::yaml::emit << root;
-		} catch(ctom::yaml::exception e){
+		} catch(ctom::exception e){
 			std::cout<<"Failed to parse config.yaml: "<<e.what()<<std::endl;
 		}
 
